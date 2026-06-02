@@ -1,0 +1,193 @@
+datadir="/var/lib/proxysql"
+
+admin_variables=
+{
+    admin_credentials="admin:admin123;radmin:radmin123"
+    mysql_ifaces="0.0.0.0:6032"
+}
+
+mysql_variables=
+{
+    threads=4
+    max_connections=2048
+    default_query_delay=0
+    default_query_timeout=36000000
+    interfaces="0.0.0.0:6033"
+    server_version="8.0.30"
+    monitor_username="proxysql_monitor"
+    monitor_password="monitor123"
+}
+
+mysql_servers=
+(
+    {
+        address="mysql_vuln"
+        port=3306
+        hostgroup=0
+        status="ONLINE"
+        weight=1
+        max_connections=200
+    }
+)
+
+mysql_users=
+(
+    {
+        username="app_user"
+        password="app123"
+        default_hostgroup=0
+        active=1
+    },
+    {
+        username="readonly_user"
+        password="read123"
+        default_hostgroup=0
+        active=1
+    }
+)
+
+# ============================================================
+# QUERY RULES - Chan cac pattern SQLi
+# Check tuan tu tu rule_id nho den lon
+# apply=1 → gap rule nao match thi dung luon, khong check tiep
+# ============================================================
+mysql_query_rules=
+(
+    # ----------------------------------------------------------
+    # Rule 1: Chan OR / AND / || based SQLi
+    # Match: OR, AND, || kem cac toan tu so sanh nhu =, !=, like
+    # Vi du bi chan:
+    #   ' OR '1'='1
+    #   ' AND 1=1 --
+    #   ' || '1'='1
+    #   ' OR username LIKE '%admin%'
+    #   ' OR 1 BETWEEN 0 AND 2
+    # ----------------------------------------------------------
+    {
+        rule_id=1
+        active=0
+        match_pattern="(?i)([\"']?\\s*(?:or|and|\\|\\|)\\s*(?:/\\*.*?\\*/|\\s|\\+)*(?:.*?[\"']?\\s*(?:=|<>|!=|<=|>=|like|in|between|is null|exists)\\s*[\"']?))"
+        error_msg="Blocked: OR/AND SQLi pattern"
+        log=1
+        apply=1
+    },
+
+    # ----------------------------------------------------------
+    # Rule 2: Chan UNION SELECT based SQLi
+    # Match: UNION SELECT, UNION ALL SELECT
+    # Co the co comment /* */ hoac whitespace giua cac tu
+    # Vi du bi chan:
+    #   ' UNION SELECT 1,username,password FROM users --
+    #   ' UNION/**/ALL/**/SELECT 1,2,3 --
+    # ----------------------------------------------------------
+    {
+        rule_id=2
+        active=0
+        match_pattern="(?i)(union(\\s|/\\*.*?\\*/)+(all(\\s|/\\*.*?\\*/)+)?select)"
+        error_msg="Blocked: UNION SELECT SQLi"
+        log=1
+        apply=1
+    },
+
+    # ----------------------------------------------------------
+    # Rule 3: Chan comment injection
+    # Match: --, #, /* kem cac lenh SQL nguy hiem
+    # Vi du bi chan:
+    #   admin' -- (bypass login)
+    #   ' # SELECT * FROM users
+    #   ' /* DROP TABLE employees */
+    # ----------------------------------------------------------
+    {
+        rule_id=3
+        active=0
+        match_pattern="(?i)(--|#|/\\*).*(drop|delete|insert|update|select)"
+        error_msg="Blocked: comment injection"
+        log=1
+        apply=1
+    },
+
+    # ----------------------------------------------------------
+    # Rule 4: Chan DDL nguy hiem
+    # Match: DROP TABLE, TRUNCATE TABLE, DROP DATABASE
+    # Co the co comment /* */ hoac whitespace giua cac tu
+    # Vi du bi chan:
+    #   DROP TABLE employees
+    #   TRUNCATE/**/TABLE users
+    #   DROP DATABASE company_db
+    # ----------------------------------------------------------
+    {
+        rule_id=4
+        active=0
+        match_pattern="(?i)(drop(\\s|/\\*.*?\\*/)+table|truncate(\\s|/\\*.*?\\*/)+table|drop(\\s|/\\*.*?\\*/)+database)"
+        error_msg="Blocked: DDL statement"
+        log=1
+        apply=1
+    },
+
+    # ----------------------------------------------------------
+    # Rule 5: Chan doc/ghi file he thong
+    # Match: LOAD_FILE, INTO OUTFILE, INTO DUMPFILE
+    # Vi du bi chan:
+    #   ' UNION SELECT LOAD_FILE('/etc/passwd') --
+    #   ' INTO OUTFILE '/var/www/shell.php'
+    # ----------------------------------------------------------
+    {
+        rule_id=5
+        active=0
+        match_pattern="(?i)(load_file|into(\\s|/\\*.*?\\*/)+outfile|into(\\s|/\\*.*?\\*/)+dumpfile)"
+        error_msg="Blocked: file operation"
+        log=1
+        apply=1
+    },
+
+    # ----------------------------------------------------------
+    # Rule 6: Chan boolean-based SQLi
+    # Match: so sanh truc tiep kieu 1=1, 'a'='a', "x"="x"
+    # Vi du bi chan:
+    #   ' OR 1=1 --
+    #   ' OR 'x'='x
+    #   ' OR "a"="a"
+    # ----------------------------------------------------------
+    {
+        rule_id=6
+        active=0
+        match_pattern="(?i)(\\d+\\s*=\\s*\\d+|'[^']*'\\s*=\\s*'[^']*'|\"[^\"]*\"\\s*=\\s*\"[^\"]*\")"
+        error_msg="Blocked: boolean-based SQLi"
+        log=1
+        apply=1
+    },
+
+    # ----------------------------------------------------------
+    # Rule 7: Chan stacked queries (nhieu lenh SQL noi tiep nhau)
+    # Match: dau ; kem cac lenh SQL nguy hiem phia sau
+    # Vi du bi chan:
+    #   '; DROP TABLE employees --
+    #   '; INSERT INTO admin VALUES('hacker','1234')
+    #   '; EXEC xp_cmdshell('whoami')
+    # ----------------------------------------------------------
+    {
+        rule_id=7
+        active=0
+        match_pattern="(?i);(\\s|/\\*.*?\\*/|%20)*(select|insert|update|delete|drop|exec|create)"
+        error_msg="Blocked: stacked queries"
+        log=1
+        apply=1
+    },
+
+    # ----------------------------------------------------------
+    # Rule 8: Chan time-based blind SQLi
+    # Match: SLEEP(), BENCHMARK(), WAITFOR DELAY
+    # Vi du bi chan:
+    #   ' OR SLEEP(5) --
+    #   ' OR BENCHMARK(1000000,MD5('test')) --
+    #   '; WAITFOR DELAY '0:0:5' --
+    # ----------------------------------------------------------
+    {
+        rule_id=8
+        active=0
+        match_pattern="(?i)(sleep\\s*\\(|benchmark\\s*\\(|waitfor\\s+delay)"
+        error_msg="Blocked: time-based blind SQLi"
+        log=1
+        apply=1
+    }
+)
