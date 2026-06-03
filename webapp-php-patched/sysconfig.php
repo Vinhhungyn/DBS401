@@ -1,10 +1,5 @@
 <?php
-// ============================================================
-// sysconfig.php — Hiển thị cấu hình hệ thống
-// Tương đương: @app.route("/config")
-// LỖ HỔNG CỐ Ý: lộ thông tin kết nối DB & secret key ra ngoài
-// (đặt tên sysconfig.php để không trùng với config.php)
-// ============================================================
+
 require_once 'config.php';
 require_once 'layout.php';
 

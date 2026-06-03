@@ -17,14 +17,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $conn = get_conn();
-
-        // LỖ HỔNG CỐ Ý: nối trực tiếp chuỗi vào SQL, không dùng prepared statement
-        $sql    = "SELECT id, username, role FROM employees WHERE username='{$username}' AND password='{$password}'";
+        $sql = "SELECT id, username, role FROM employees WHERE username='{$username}' AND password='{$password}'";
         $result = $conn->query($sql);
 
         if ($result && $row = $result->fetch_row()) {
             $_SESSION['user'] = $row[1];
             $_SESSION['role'] = $row[2];
+            // LỖ HỔNG: set cookie role dựa trên role trong DB
+            setcookie('role', $row[2], 0, '/');
             $conn->close();
             header('Location: /search.php');
             exit;
@@ -36,7 +36,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Lỗi hệ thống: ' . $e->getMessage();
     }
 }
-
 // ---- Render HTML ----
 $err_html = $error   ? '<div class="alert-danger">'  . htmlspecialchars($error)   . '</div>' : '';
 $suc_html = $success ? '<div class="alert-success">' . htmlspecialchars($success) . '</div>' : '';

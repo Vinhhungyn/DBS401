@@ -5,15 +5,21 @@
 // ============================================================
 
 function render_layout(string $content): void {
-    $user = $_SESSION['user'] ?? null;
-    $nav_user = '';
-    if ($user) {
-        $u = htmlspecialchars($user);
-        $nav_user = "<span style='font-size:14px;'>Xin chào, <b>{$u}</b></span>"
-                  . "<a href='/logout.php'>Đăng xuất</a>";
-    } else {
-        $nav_user = "<a href='/login.php'>Đăng nhập</a>";
-    }
+  $user = $_SESSION['user'] ?? null;
+  // LỖ HỔNG: lấy role từ cookie trước, nếu không có mới lấy từ session
+  $role = $_COOKIE['role'] ?? ($_SESSION['role'] ?? 'guest');
+
+  $nav_user = '';
+  if ($user) {
+      $nav_user = "<span style='font-size:14px;'>Xin chào, <b>{$user}</b></span>"
+                . "<a href='/logout.php'>Đăng xuất</a>";
+      // Nếu role là admin (từ cookie hoặc session), hiển thị thêm link Cấu hình hệ thống
+      if ($role === 'admin') {
+          $nav_user .= " <a href='/sysconfig.php'>Cấu hình hệ thống</a>";
+      }
+  } else {
+      $nav_user = "<a href='/login.php'>Đăng nhập</a>";
+  }
 
     echo <<<HTML
 <!DOCTYPE html>
