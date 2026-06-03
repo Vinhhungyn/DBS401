@@ -3,6 +3,11 @@
 require_once 'config.php';
 require_once 'layout.php';
 
+if (!isset($_SESSION['user']) || $_SESSION['role'] !== 'admin') {
+  http_response_code(403);
+  die('403 Forbidden');
+}
+
 $content = '
 <div class="card">
   <h2>&#9881; Thông tin cấu hình hệ thống</h2>
