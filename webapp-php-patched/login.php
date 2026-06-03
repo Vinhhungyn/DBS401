@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $conn->close();
     } catch (Exception $e) {
-        $error = 'Lỗi hệ thống: ' . $e->getMessage();
+        $error = '' . $e->getMessage();
     }
 }
 // ---- Render HTML ----

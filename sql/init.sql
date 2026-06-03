@@ -79,3 +79,9 @@ BEGIN
     DEALLOCATE PREPARE stmt;
 END //
 DELIMITER ;
+-- Fix authentication method cho ProxySQL tuong thich
+ALTER USER 'app_user'@'%' IDENTIFIED WITH mysql_native_password BY 'app123';
+ALTER USER 'readonly_user'@'%' IDENTIFIED WITH mysql_native_password BY 'read123';
+CREATE USER IF NOT EXISTS 'proxysql_monitor'@'%' IDENTIFIED WITH mysql_native_password BY 'monitor123';
+GRANT USAGE ON *.* TO 'proxysql_monitor'@'%';
+FLUSH PRIVILEGES;

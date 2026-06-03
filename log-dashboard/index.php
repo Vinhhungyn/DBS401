@@ -61,7 +61,6 @@ foreach ($mysql_lines as $l) {
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="refresh" content="5">
 <title>DB Security Monitor</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -171,5 +170,28 @@ body { background: #0d1117; color: #c9d1d9; font-family: 'Courier New', monospac
   </div>
 
 </div>
+<script>
+// Auto refresh chi phan log, khong reload ca trang
+setTimeout(function() {
+    var scrollPos = document.querySelector('.log-body') 
+                  ? document.querySelector('.log-body').scrollTop 
+                  : 0;
+    location.reload();
+}, 5000);
+
+// Giu nguyen scroll position
+window.onbeforeunload = function() {
+    sessionStorage.setItem('scrollPos', 
+        document.querySelectorAll('.log-body')[0]?.scrollTop || 0);
+};
+
+window.onload = function() {
+    var pos = sessionStorage.getItem('scrollPos');
+    if (pos) {
+        var panels = document.querySelectorAll('.log-body');
+        if (panels[0]) panels[0].scrollTop = parseInt(pos);
+    }
+};
+</script>
 </body>
 </html>

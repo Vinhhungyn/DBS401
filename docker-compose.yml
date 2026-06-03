@@ -52,7 +52,8 @@ services:
       DB_HOST: proxysql
       DB_PORT: 6033
       DB_USER: app_user
-      DB_PASS: App@Str0ng#2024!
+      DB_PASS: app123
+
     depends_on:
       - proxysql
     networks:
