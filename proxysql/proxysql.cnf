@@ -1,0 +1,135 @@
+datadir="/var/lib/proxysql"
+
+admin_variables=
+{
+    admin_credentials="admin:admin123;radmin:radmin123"
+    mysql_ifaces="0.0.0.0:6032"
+}
+
+mysql_variables=
+{
+    threads=4
+    max_connections=2048
+    default_query_delay=0
+    default_query_timeout=36000000
+    interfaces="0.0.0.0:6033"
+    server_version="8.0.30"
+    monitor_username="proxysql_monitor"
+    monitor_password="monitor123"
+}
+
+mysql_servers=
+(
+    {
+        address="mysql_vuln"
+        port=3306
+        hostgroup=0
+        status="ONLINE"
+        weight=1
+        max_connections=200
+    }
+)
+
+mysql_users=
+(
+    {
+        username="app_user"
+        password="app123"
+        default_hostgroup=0
+        active=1
+    },
+    {
+        username="readonly_user"
+        password="read123"
+        default_hostgroup=0
+        active=1
+    }
+)
+
+# ============================================================
+# QUERY RULES - Chan cac pattern SQLi
+# Check tuan tu tu rule_id nho den lon
+# apply=1 -> gap rule nao match thi dung luon
+# ============================================================
+mysql_query_rules=
+(
+    # Rule 1: Chan OR / AND / || / boolean-based SQLi
+    # Cover: ' OR '1'='1 / ' AND 1=1 / ' || '1'='1
+    #        ' OR 1=1 / ' OR 'x'='x / ' OR a=a
+      {
+        rule_id=1
+        active=1
+        match_pattern="(?i)(\'.*?\'\s+or\s+\'.*?\'\s*=\s*\'.*?\'|\'\s+or\s+\'.*?\'\s*=\s*\'.*?\')"
+        error_msg="attack detection"
+        log=1
+        apply=1
+    },
+
+    # Rule 2: Chan UNION SELECT based SQLi
+    # Cover: ' UNION SELECT / ' UNION ALL SELECT
+    #        ' UNION/**/SELECT (voi comment)
+    {
+        rule_id=2
+        active=1
+        match_pattern="(?i)(union(\\s|/\\*.*?\\*/)+(all(\\s|/\\*.*?\\*/)+)?select)"
+        error_msg="attack detection"
+        log=1
+        apply=1
+    },
+
+    # Rule 3: Chan comment injection
+    # Cover: admin'-- / admin'# / admin'/*
+    {
+        rule_id=3
+        active=1
+        match_pattern="(?i)(--|#|/\\*).*(drop|delete|insert|update|select|union|load|into)"
+        error_msg="attack detection"
+        log=1
+        apply=1
+    },
+
+    # Rule 4: Chan DDL nguy hiem
+    # Cover: DROP TABLE / TRUNCATE TABLE / DROP DATABASE
+    {
+        rule_id=4
+        active=1
+        match_pattern="(?i)(drop(\\s|/\\*.*?\\*/)+table|truncate(\\s|/\\*.*?\\*/)+table|drop(\\s|/\\*.*?\\*/)+database)"
+        error_msg="attack detection"
+        log=1
+        apply=1
+    },
+
+    # Rule 5: Chan doc/ghi file he thong
+    # Cover: LOAD_FILE('/etc/passwd') / INTO OUTFILE / INTO DUMPFILE
+    {
+        rule_id=5
+        active=1
+        match_pattern="(?i)(load_file|into(\\s|/\\*.*?\\*/)+outfile|into(\\s|/\\*.*?\\*/)+dumpfile)"
+        error_msg="attack detection"
+        log=1
+        apply=1
+    },
+
+    # Rule 6: Chan stacked queries
+    # Cover: '; DROP TABLE / '; INSERT INTO / '; EXEC
+    {
+        rule_id=6
+        active=1
+        match_pattern="(?i);(\\s|/\\*.*?\\*/|%20)*(select|insert|update|delete|drop|exec|create)"
+        error_msg="attack detection"
+        log=1
+        apply=1
+    },
+
+    # Rule 7: Chan time-based blind SQLi
+    # Cover: SLEEP(5) / BENCHMARK(1000000,MD5(1)) / WAITFOR DELAY
+    {
+        rule_id=7
+        active=1
+        match_pattern="(?i)(sleep\\s*\\(|benchmark\\s*\\(|waitfor\\s+delay)"
+        error_msg="attack detection"
+        log=1
+        apply=1
+    }
+)
+
