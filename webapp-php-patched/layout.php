@@ -5,7 +5,7 @@
 
 function render_layout(string $content): void {
   $user = $_SESSION['user'] ?? null;
-  $role = $_COOKIE['role'] ?? ($_SESSION['role'] ?? 'guest');
+  $role = $_SESSION['role'] ?? 'guest';
   $avatar = $_SESSION['avatar'] ?? null;
 
   $nav_user = '';

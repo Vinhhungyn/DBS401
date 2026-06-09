@@ -1,7 +1,5 @@
 version: '3.8'
-
 services:
-
   mysql-vulnerable:
     image: mysql:8.0
     container_name: mysql_vuln
@@ -14,7 +12,7 @@ services:
     volumes:
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
       - mysql_data:/var/lib/mysql
-      - mysql_log:/var/log/mysql         # share log volume
+      - mysql_log:/var/log/mysql
     command: >
       --general-log=1
       --general-log-file=/var/log/mysql/general.log
@@ -44,6 +42,7 @@ services:
     build: ./webapp-php-patched
     volumes:
       - ./webapp-php-patched:/var/www/html
+      - apache_log:/var/log/apache2        # share apache log
     container_name: webapp_protected
     restart: always
     ports:
@@ -53,7 +52,6 @@ services:
       DB_PORT: 6033
       DB_USER: app_user
       DB_PASS: app123
-
     depends_on:
       - proxysql
     networks:
@@ -68,15 +66,12 @@ services:
       - "6032:6032"
     volumes:
       - ./proxysql/proxysql.cnf:/etc/proxysql.cnf
-      - proxysql_log:/var/lib/proxysql   # share log volume
+      - proxysql_log:/var/lib/proxysql
     depends_on:
       - mysql-vulnerable
     networks:
       - dbnet
 
-  # ============================================================
-  # 5002 - Log Dashboard
-  # ============================================================
   log-dashboard:
     build: ./log-dashboard
     container_name: log_dashboard
@@ -84,11 +79,13 @@ services:
     ports:
       - "5002:80"
     volumes:
-      - mysql_log:/var/log/mysql:ro          # doc log MySQL
-      - proxysql_log:/var/log/proxysql:ro    # doc log ProxySQL
+      - mysql_log:/var/log/mysql:ro
+      - proxysql_log:/var/log/proxysql:ro
+      - apache_log:/var/log/apache2:ro     # doc apache log tu webapp-protected
     depends_on:
       - mysql-vulnerable
       - proxysql
+      - webapp-protected
     networks:
       - dbnet
 
@@ -96,6 +93,7 @@ volumes:
   mysql_data:
   mysql_log:
   proxysql_log:
+  apache_log:
 
 networks:
   dbnet:
