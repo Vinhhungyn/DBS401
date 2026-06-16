@@ -71,53 +71,22 @@ function parse_modsec_log($lines) {
     return $blocks;
 }
 
-// ===========================
-// LOAD LOGS
-// ===========================
+$mysql_lines  = read_log('/var/log/mysql/general.log', 300);
+$modsec_lines = read_log('/var/log/apache2/error_real.log', 300);
 
-$mysql_lines = read_log('/var/log/mysql/general.log', 300);
+// Đọc cả 2 webapp
+$apache_protected = read_log('/var/log/apache2/access_real.log', 200);       // 5001
+$apache_vuln      = read_log('/var/log/apache2_vuln/access_vuln.log', 200);  // 5000
 
-/*
-5001 — protected
-*/
-$apache_protected = read_log(
-    '/var/log/apache2/access_real.log',
-    200
-);
+// Merge + parse
+$apache_events = parse_apache_log(array_merge($apache_protected, $apache_vuln));
 
-$modsec_lines = read_log(
-    '/var/log/apache2/error_real.log',
-    300
-);
+// Sort mới → cũ theo timestamp
+usort($apache_events, function($a, $b) {
+    return strtotime($b['time']) - strtotime($a['time']);
+});
 
-/*
-5000 — vulnerable
-*/
-$apache_vuln = read_log(
-    '/var/log/apache2_vuln/access_vuln.log',
-    200
-);
-
-/*
-merge tất cả request
-*/
-$apache_lines = array_merge(
-    $apache_protected,
-    $apache_vuln
-);
-
-/*
-sort mới → cũ
-*/
-$apache_lines = array_reverse($apache_lines);
-
-$apache_events = parse_apache_log(
-    $apache_lines
-);
-
-$modsec_events = parse_modsec_log(
-    $modsec_lines
-);
+$modsec_events = parse_modsec_log($modsec_lines);
 
 // ProxySQL stats
 $proxysql_lines = [];
@@ -215,7 +184,6 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Courier New',monospace;font-s
           <th>Rule Message</th>
         </tr>
         <?php
-        // Merge apache + modsec events theo URI
         $merged = [];
         foreach ($apache_events as $ev) {
             $key = $ev['uri'];
