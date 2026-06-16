@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user'] = $row[1];
             $_SESSION['role'] = $row[2];
             // LỖ HỔNG: set cookie role dựa trên role trong DB
-            setcookie('role', $row[2], 0, '/');
+        
             $conn->close();
             header('Location: /search.php');
             exit;

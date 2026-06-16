@@ -24,6 +24,7 @@ services:
     build: ./webapp-php
     volumes:
       - ./webapp-php:/var/www/html
+      - apache_vuln_log:/var/log/apache2
     container_name: webapp_vuln
     restart: always
     ports:
@@ -42,7 +43,7 @@ services:
     build: ./webapp-php-patched
     volumes:
       - ./webapp-php-patched:/var/www/html
-      - apache_log:/var/log/apache2        # share apache log
+      - apache_log:/var/log/apache2
     container_name: webapp_protected
     restart: always
     ports:
@@ -81,7 +82,8 @@ services:
     volumes:
       - mysql_log:/var/log/mysql:ro
       - proxysql_log:/var/log/proxysql:ro
-      - apache_log:/var/log/apache2:ro     # doc apache log tu webapp-protected
+      - apache_log:/var/log/apache2:ro
+      - apache_vuln_log:/var/log/apache2_vuln:ro
     depends_on:
       - mysql-vulnerable
       - proxysql
@@ -90,6 +92,7 @@ services:
       - dbnet
 
 volumes:
+  apache_vuln_log:
   mysql_data:
   mysql_log:
   proxysql_log:

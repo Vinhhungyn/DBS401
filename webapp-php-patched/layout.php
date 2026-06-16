@@ -327,6 +327,7 @@ function render_layout(string $content): void {
   <div class="navbar-nav">
     <a href="/search.php">👥 Nhân viên</a>
     <a href="/upload.php">📎 Tài liệu</a>
+    <a href="/feedback.php">💬 Phản hồi</a>
     <div class="navbar-divider"></div>
     {$nav_user}
   </div>
