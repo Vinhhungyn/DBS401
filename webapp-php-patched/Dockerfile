@@ -17,7 +17,7 @@ COPY modsecurity/rule-sql.conf /etc/modsecurity/rules/rule-sql.conf
 COPY modsecurity/rule-fileupload.conf /etc/modsecurity/rules/rule-fileupload.conf
 COPY modsecurity/rule-misconfig.conf /etc/modsecurity/rules/rule-misconfig.conf
 COPY modsecurity/rule-cookie.conf /etc/modsecurity/rules/rule-cookie.conf
-COPY modsecurity/rule-xss.conf /etc/modsecurity/rules/rule-xss.conf
+COPY modsecurity/rule-xss.conf /etc/modsecurity/rules/rule-xss.conf`nCOPY modsecurity/rule-login.conf /etc/modsecurity/rules/rule-login.conf`nCOPY modsecurity/rule-login.conf /etc/modsecurity/rules/rule-login.conf
 
 RUN chown -R www-data:www-data /var/www/html
 
