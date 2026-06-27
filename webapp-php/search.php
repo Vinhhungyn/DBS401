@@ -7,7 +7,17 @@
 // ============================================================
 require_once 'config.php';
 require_once 'layout.php';
-$role = $_COOKIE['role'] ?? ($_SESSION['role'] ?? 'guest');
+
+// FIX: kiem tra quyen truy cap o phia server (khong chi an link ngoai UI)
+// FIX: doc role tu JWT token (da verify), khong con doc tu session/cookie rieng
+$role = 'guest';
+if (isset($_COOKIE['token'])) {
+    require_once 'jwt.php';
+    $payload = jwt_decode($_COOKIE['token']);
+    if ($payload && isset($payload['role'])) {
+        $role = $payload['role'];
+    }
+}
 if (!in_array($role, ['admin', 'manager'], true)) {
     http_response_code(403);
     die('<h2>403 Forbidden</h2><p>Bạn không có quyền truy cập trang này.</p>');

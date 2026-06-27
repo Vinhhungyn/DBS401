@@ -5,7 +5,16 @@
 
 function render_layout(string $content): void {
   $user = $_SESSION['user'] ?? null;
-  $role = $_COOKIE['role'] ?? ($_SESSION['role'] ?? 'guest');
+
+  // FIX: doc role tu JWT token (da verify), khong con doc tu session/cookie rieng
+  $role = 'guest';
+  if (isset($_COOKIE['token'])) {
+      require_once 'jwt.php';
+      $payload = jwt_decode($_COOKIE['token']);
+      if ($payload && isset($payload['role'])) {
+          $role = $payload['role'];
+      }
+  }
   $avatar = $_SESSION['avatar'] ?? null;
 
   $nav_user = '';

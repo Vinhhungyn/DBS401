@@ -1,24 +1,39 @@
 <?php
 // ============================================================
-// search.php — Tìm kiếm nhân viên
-// Tương đương: @app.route("/search")
-// LỖ HỔNG CỐ Ý: UNION-based SQLi, hiện query để demo
+// search.php (port 5001 - PATCHED) — Tìm kiếm nhân viên
+// FIX 1: chi admin va manager moi duoc xem trang nay
+// FIX 2: dung prepared statement, khong con SQLi
 // ============================================================
 require_once 'config.php';
 require_once 'layout.php';
 
-$q         = $_GET['q'] ?? '';
-$results   = null;   // null = chưa search
-$sql_shown = null;
+// FIX: kiem tra quyen truy cap o phia server
+// FIX: doc role tu JWT token (da verify signature trong jwt.php)
+$role = 'guest';
+if (isset($_COOKIE['token'])) {
+    require_once 'jwt.php';
+    $payload = jwt_decode($_COOKIE['token']);
+    if ($payload && isset($payload['role'])) {
+        $role = $payload['role'];
+    }
+}
+if (!in_array($role, ['admin', 'manager'], true)) {
+    http_response_code(403);
+    die('<h2>403 Forbidden</h2><p>Bạn không có quyền truy cập trang này.</p>');
+}
+
+$q       = $_GET['q'] ?? '';
+$results = null; // null = chưa search
 
 if ($q !== '') {
     try {
         $conn = get_conn();
 
-        // LỖ HỔNG CỐ Ý: nối chuỗi thẳng vào SQL, không escape
-        $sql       = "SELECT id, username, role, email, salary FROM employees WHERE username='{$q}'";
-        $sql_shown = $sql;
-        $res       = $conn->query($sql);
+        // FIX: prepared statement - khong con SQLi
+        $stmt = $conn->prepare("SELECT id, username, role, email, salary FROM employees WHERE username = ?");
+        $stmt->bind_param("s", $q);
+        $stmt->execute();
+        $res = $stmt->get_result();
 
         $results = [];
         if ($res) {
@@ -26,10 +41,10 @@ if ($q !== '') {
                 $results[] = $row;
             }
         }
+        $stmt->close();
         $conn->close();
     } catch (Exception $e) {
-        $results   = [];
-        $sql_shown = 'LỖI: ' . $e->getMessage();
+        $results = [];
     }
 }
 
@@ -57,7 +72,7 @@ if ($results !== null) {
         foreach ($results as $r) {
             $id     = htmlspecialchars($r[0] ?? '');
             $uname  = htmlspecialchars($r[1] ?? '');
-            $role   = htmlspecialchars($r[2] ?? '');
+            $role_r = htmlspecialchars($r[2] ?? '');
             $email  = htmlspecialchars($r[3] ?? '');
             $salary = is_numeric($r[4])
                     ? number_format((float)$r[4], 0, '.', ',') . ' đ'
@@ -65,7 +80,7 @@ if ($results !== null) {
             $content .= "<tr>
               <td>{$id}</td>
               <td><b>{$uname}</b></td>
-              <td><span class='badge badge-{$role}'>{$role}</span></td>
+              <td><span class='badge badge-{$role_r}'>{$role_r}</span></td>
               <td>{$email}</td>
               <td>{$salary}</td>
             </tr>";
@@ -76,16 +91,5 @@ if ($results !== null) {
     }
     $content .= '</div>';
 }
-
-// ---- Debug SQL ----
-// if ($sql_shown !== null) {
-//    $sql_esc  = htmlspecialchars($sql_shown);
-//    $content .= <<<HTML
-//  <div class="card" style="background:#fff8e1;">
-//  <h2>&#128196; Query đã thực thi (debug mode)</h2>
-//  <code style="background:#f5f5f5; padding:10px; display:block; border-radius:4px; word-break:break-all;">{$sql_esc}</code>
-//</div>
-//HTML;
-//}
 
 render_layout($content);

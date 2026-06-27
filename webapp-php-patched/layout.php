@@ -5,7 +5,16 @@
 
 function render_layout(string $content): void {
   $user = $_SESSION['user'] ?? null;
-  $role = $_COOKIE['role'] ?? ($_SESSION['role'] ?? 'guest');
+
+  // FIX: doc role tu JWT token (da verify signature trong jwt.php)
+  $role = 'guest';
+  if (isset($_COOKIE['token'])) {
+      require_once 'jwt.php';
+      $payload = jwt_decode($_COOKIE['token']); // tra ve null neu signature sai/het han
+      if ($payload && isset($payload['role'])) {
+          $role = $payload['role'];
+      }
+  }
   $avatar = $_SESSION['avatar'] ?? null;
 
   $nav_user = '';
