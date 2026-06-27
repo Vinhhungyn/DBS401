@@ -1,6 +1,6 @@
 <?php
 // register.php (port 5001 - PATCHED)
-// An toan: prepared statement + password_hash
+// An toan: prepared statement, KHONG hash (dong bo voi DB plaintext)
 require_once 'config.php';
 require_once 'layout.php';
 
@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $conn = get_conn();
+
             // Kiem tra username ton tai
             $stmt = $conn->prepare("SELECT id FROM employees WHERE username = ?");
             $stmt->bind_param("s", $username);
@@ -32,17 +33,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($stmt->num_rows > 0) {
                 $error = 'Tên đăng nhập đã tồn tại!';
+                $stmt->close();
             } else {
                 $stmt->close();
-                // Hash password
-                $hash = password_hash($password, PASSWORD_BCRYPT);
-                $role = 'user';
+                $role   = 'user';
                 $salary = 0;
 
+                // Prepared statement - luu plaintext (dong bo DB)
                 $stmt2 = $conn->prepare(
                     "INSERT INTO employees (username, email, password, role, salary) VALUES (?, ?, ?, ?, ?)"
                 );
-                $stmt2->bind_param("ssssi", $username, $email, $hash, $role, $salary);
+                $stmt2->bind_param("ssssi", $username, $email, $password, $role, $salary);
                 if ($stmt2->execute()) {
                     $success = 'Đăng ký thành công! <a href="/login.php">Đăng nhập ngay</a>';
                 } else {
