@@ -1,20 +1,18 @@
 <?php
 // ============================================================
-// upload.php — Trang upload file
-// LỖ HỔNG CỐ Ý: không kiểm tra loại file, cho phép upload .php
-// Red Team upload webshell → thực thi lệnh hệ thống
+// upload.php (port 5001 - PATCHED)
+// Fix: whitelist ext, an duong dan, chong path traversal
 // ============================================================
 require_once 'config.php';
 require_once 'layout.php';
-
-$message = '';
-$msg_type = '';
-$uploaded_url = '';
 
 if (!isset($_SESSION['user'])) {
     header('Location: /login.php');
     exit;
 }
+
+$message  = '';
+$msg_type = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
     $file     = $_FILES['file'];
@@ -23,16 +21,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
     $allowed  = ['jpg', 'jpeg', 'png'];
     $upload_dir = __DIR__ . '/uploads/';
 
-    if (!in_array($ext, $allowed)) {
-        $message  = 'Chỉ chấp nhận ảnh: jpg, jpeg, png!';
+    // Chong path traversal: basename() + kiem tra ext
+    if (strpos($filename, '..') !== false || strpos($filename, '/') !== false || strpos($filename, '\\') !== false) {
+        $message  = 'Tên file không hợp lệ!';
+        $msg_type = 'danger';
+    } elseif (!in_array($ext, $allowed)) {
+        $message  = 'Chỉ chấp nhận: jpg, jpeg, png!';
+        $msg_type = 'danger';
+    } elseif ($file['size'] > 2 * 1024 * 1024) {
+        $message  = 'File quá lớn! Tối đa 2MB.';
         $msg_type = 'danger';
     } else {
         if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
+
+        // Doi ten ngau nhien - khong expose ten goc
         $safe_name = uniqid('file_', true) . '.' . $ext;
         $dest = $upload_dir . $safe_name;
+
         if (move_uploaded_file($file['tmp_name'], $dest)) {
-            $uploaded_url = '/uploads/' . $safe_name;
-            $message  = "Upload thành công! File: <a href='{$uploaded_url}' target='_blank'>{$safe_name}</a>";
+            // Khong hien duong dan, chi thong bao thanh cong
+            $message  = 'Upload thành công!';
             $msg_type = 'success';
         } else {
             $message  = 'Upload thất bại!';
@@ -41,31 +49,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
     }
 }
 
-$msg_html = $message
-    ? "<div class='alert-{$msg_type}'>{$message}</div>"
-    : '';
-
-$shell_url = $uploaded_url ? "<div class='alert-danger'>
-    &#9888; Thực thi lệnh: <a href='{$uploaded_url}?cmd=id' target='_blank'>{$uploaded_url}?cmd=id</a><br>
-    Thử: <code>{$uploaded_url}?cmd=ls /var/www/html</code><br>
-    Thử: <code>{$uploaded_url}?cmd=cat /var/www/html/config.php</code>
-</div>" : '';
+$msg_html = $message ? "<div class='alert-{$msg_type}'>" . htmlspecialchars($message) . "</div>" : '';
 
 $content = <<<HTML
 <div class="card">
   <h2>&#128196; Upload tài liệu nội bộ</h2>
   {$msg_html}
-  {$shell_url}
   <form method="POST" enctype="multipart/form-data">
     <label>Chọn file để upload</label>
-    <input type="file" name="file" style="margin: 8px 0 16px; width:100%;">
+    <input type="file" name="file" accept=".jpg,.jpeg,.png" style="margin: 8px 0 16px; width:100%;">
     <button type="submit">Upload</button>
   </form>
-  <p class="hint">Hỗ trợ: PDF, DOC, JPG... (tất cả định dạng)</p>
-
+  <p class="hint">Hỗ trợ: JPG, JPEG, PNG · Tối đa 2MB</p>
 </div>
-
-
 HTML;
 
 render_layout($content);

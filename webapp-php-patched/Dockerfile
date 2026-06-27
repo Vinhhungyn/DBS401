@@ -28,4 +28,14 @@ RUN sed -i 's|CustomLog \${APACHE_LOG_DIR}/access.log combined|CustomLog /var/lo
     && chown www-data:adm /var/log/apache2/access_real.log /var/log/apache2/error_real.log \
     && chmod 664 /var/log/apache2/access_real.log /var/log/apache2/error_real.log
 
+# Ngan PHP thuc thi trong /uploads/
+RUN printf '<Directory /var/www/html/uploads>\n\
+    php_flag engine off\n\
+    Options -ExecCGI -Indexes\n\
+    AddType text/plain .php .php5 .phtml .phar\n\
+    <FilesMatch "\\.(php[0-9]*|phtml|phar|asp|aspx|jsp|py|sh|pl|cgi)$">\n\
+        Require all denied\n\
+    </FilesMatch>\n\
+</Directory>\n' >> /etc/apache2/apache2.conf
+
 EXPOSE 80

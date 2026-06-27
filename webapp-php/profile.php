@@ -139,14 +139,7 @@ $content = <<<HTML
       </table>
     </div>
 
-    <!-- Shell info if uploaded -->
-    <div class="card" style="background:#fff8e1; border-color:#fde68a;">
-      <h2 style="color:#b45309;">💡 Ghi chú hệ thống</h2>
-      <p style="font-size:14px;color:#78350f;">
-        Ảnh đại diện sau khi upload sẽ lưu tại: <code>/uploads/[tên file]</code><br>
-        Có thể truy cập trực tiếp qua URL: <code>http://localhost:5000/uploads/[tên file]</code>
-      </p>
-    </div>
+   
   </div>
 
 </div>
