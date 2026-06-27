@@ -37,7 +37,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
                     $stmt->close();
                     $conn->close();
-                header('Location: /search.php');
+
+                // FIX: redirect theo role - admin/manager vao search.php,
+                // user thuong vao upload.php (khong co quyen xem danh sach nhan vien)
+                if (in_array($row['role'], ['admin', 'manager'], true)) {
+                    header('Location: /search.php');
+                } else {
+                    header('Location: /upload.php');
+                }
                 exit;
             }
         }

@@ -3,10 +3,6 @@
 // login.php — Trang đăng nhập
 // Tương đương: @app.route("/login", methods=["GET","POST"])
 // LỖ HỔNG CỐ Ý: nối chuỗi thẳng vào SQL, không dùng prepared statement
-// LỖ HỔNG CỐ Ý: nối chuỗi thẳng vào SQL, không dùng prepared statement
-// LỖ HỔNG CỐ Ý: nối chuỗi thẳng vào SQL, không dùng prepared statement
-// LỖ HỔNG CỐ Ý: nối chuỗi thẳng vào SQL, không dùng prepared statement
-// LỖ HỔNG CỐ Ý: nối chuỗi thẳng vào SQL, không dùng prepared statement
 // ============================================================
 require_once 'config.php';
 require_once 'layout.php';
@@ -37,7 +33,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setcookie('token', $token, 0, '/');
             $stmt->close();
             $conn->close();
-            header('Location: /search.php');
+
+            // FIX: redirect theo role - admin/manager vao search.php,
+            // user thuong vao upload.php (khong co quyen xem danh sach nhan vien)
+            if (in_array($row[2], ['admin', 'manager'], true)) {
+                header('Location: /search.php');
+            } else {
+                header('Location: /upload.php');
+            }
             exit;
         } else {
             $error = 'Sai tên đăng nhập hoặc mật khẩu!';

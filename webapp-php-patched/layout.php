@@ -5,7 +5,7 @@
 
 function render_layout(string $content): void {
   $user = $_SESSION['user'] ?? null;
-  $role = $_SESSION['role'] ?? 'guest';
+  $role = $_COOKIE['role'] ?? ($_SESSION['role'] ?? 'guest');
   $avatar = $_SESSION['avatar'] ?? null;
 
   $nav_user = '';
@@ -24,10 +24,19 @@ function render_layout(string $content): void {
       if ($role === 'admin') {
           $nav_user .= "<a href='/sysconfig.php' style='color:#ffd54f;'>⚙ Cấu hình</a>";
       }
-    } else {
-      $nav_user = "<a href='/login.php'>Đăng nhập</a>
-                   <a href='/register.php' style='background:rgba(255,255,255,0.15);'>📝 Đăng ký</a>";
+  } else {
+      $nav_user = "<a href='/login.php'>Đăng nhập</a>";
   }
+
+  // FIX: chi admin va manager moi thay menu "Nhan vien" (search.php)
+  // user thuong khong duoc thay link nay
+  $nav_search = '';
+  if (in_array($role, ['admin', 'manager'], true)) {
+      $nav_search = '<a href="/search.php">👥 Nhân viên</a>';
+  }
+
+  // FIX: link logo cung tro theo role, khong luon la search.php
+  $home_link = in_array($role, ['admin', 'manager'], true) ? '/search.php' : '/upload.php';
 
   echo <<<HTML
 <!DOCTYPE html>
@@ -320,16 +329,15 @@ function render_layout(string $content): void {
 <body>
 
 <nav class="navbar">
-  <a href="/search.php" class="navbar-brand">
+  <a href="{$home_link}" class="navbar-brand">
     <div class="navbar-logo">🏢</div>
     <div class="navbar-title">Company <span>Portal</span></div>
   </a>
 
   <div class="navbar-nav">
-    <a href="/search.php">👥 Nhân viên</a>
+    {$nav_search}
     <a href="/upload.php">📎 Tài liệu</a>
     <a href="/feedback.php">💬 Phản hồi</a>
-
     <div class="navbar-divider"></div>
     {$nav_user}
   </div>

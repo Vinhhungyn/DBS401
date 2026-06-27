@@ -3,9 +3,15 @@
 // search.php — Tìm kiếm nhân viên
 // Tương đương: @app.route("/search")
 // LỖ HỔNG CỐ Ý: UNION-based SQLi, hiện query để demo
+// FIX: chi admin va manager moi duoc xem trang nay
 // ============================================================
 require_once 'config.php';
 require_once 'layout.php';
+$role = $_COOKIE['role'] ?? ($_SESSION['role'] ?? 'guest');
+if (!in_array($role, ['admin', 'manager'], true)) {
+    http_response_code(403);
+    die('<h2>403 Forbidden</h2><p>Bạn không có quyền truy cập trang này.</p>');
+}
 
 $q         = $_GET['q'] ?? '';
 $results   = null;   // null = chưa search
@@ -57,7 +63,7 @@ if ($results !== null) {
         foreach ($results as $r) {
             $id     = htmlspecialchars($r[0] ?? '');
             $uname  = htmlspecialchars($r[1] ?? '');
-            $role   = htmlspecialchars($r[2] ?? '');
+            $role_r = htmlspecialchars($r[2] ?? '');
             $email  = htmlspecialchars($r[3] ?? '');
             $salary = is_numeric($r[4])
                     ? number_format((float)$r[4], 0, '.', ',') . ' đ'
@@ -65,7 +71,7 @@ if ($results !== null) {
             $content .= "<tr>
               <td>{$id}</td>
               <td><b>{$uname}</b></td>
-              <td><span class='badge badge-{$role}'>{$role}</span></td>
+              <td><span class='badge badge-{$role_r}'>{$role_r}</span></td>
               <td>{$email}</td>
               <td>{$salary}</td>
             </tr>";
