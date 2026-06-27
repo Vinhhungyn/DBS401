@@ -21,9 +21,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($result && $row = $result->fetch_assoc()) {
             // Kiem tra password hash
-            if (password_verify($password, $row['password'])) {
+            if ($password === $row['password']) {
                 $_SESSION['user'] = $row['username'];
                 $_SESSION['role'] = $row['role'];
+                // Tao JWT token
+                require_once 'jwt.php';
+                $token = jwt_create($row['username'], $row['role']);
+                setcookie('token', $token, time() + 3600, '/', '', false, true);
                 // Set cookie logged_in
                 setcookie('logged_in', '1', [
                     'expires'  => time() + 3600,
@@ -31,8 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'httponly' => true,
                     'samesite' => 'Lax',
                 ]);
-                $stmt->close();
-                $conn->close();
+                    $stmt->close();
+                    $conn->close();
                 header('Location: /search.php');
                 exit;
             }

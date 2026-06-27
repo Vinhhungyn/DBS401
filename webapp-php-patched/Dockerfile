@@ -19,7 +19,7 @@ COPY modsecurity/rule-misconfig.conf /etc/modsecurity/rules/rule-misconfig.conf
 COPY modsecurity/rule-cookie.conf /etc/modsecurity/rules/rule-cookie.conf
 COPY modsecurity/rule-xss.conf /etc/modsecurity/rules/rule-xss.conf
 COPY modsecurity/rule-login.conf /etc/modsecurity/rules/rule-login.conf
-
+COPY modsecurity/rule-jwt.conf /etc/modsecurity/rules/rule-jwt.conf
 RUN chown -R www-data:www-data /var/www/html
 
 RUN sed -i 's|CustomLog \${APACHE_LOG_DIR}/access.log combined|CustomLog /var/log/apache2/access_real.log combined|' /etc/apache2/sites-enabled/000-default.conf \
