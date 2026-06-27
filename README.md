@@ -16,4 +16,4 @@ Hiện tại đg có :
 SQL 2 chổ 
 PE 2 chổ
 File upload
-misconfig 
+misconfig (C:\Windows\System32\ipconfig.exe) xem ip và vô fuff (ffuf -u http://192.168.204.1:5000/FUZZ.php -w /usr/share/wordlists/dirb/common.txt )
