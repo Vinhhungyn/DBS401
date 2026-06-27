@@ -31,6 +31,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['role'] = $row[2];
             // LỖ HỔNG: set cookie role dựa trên role trong DB
             setcookie('role', $row[2], 0, '/');
+            // Tao JWT token (vulnerable - secret key yeu)
+            require_once 'jwt.php';
+            $token = jwt_create($row[1], $row[2]);
+            setcookie('token', $token, 0, '/');
             $stmt->close();
             $conn->close();
             header('Location: /search.php');
