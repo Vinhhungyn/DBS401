@@ -45,7 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 $stmt2->bind_param("ssssi", $username, $email, $password, $role, $salary);
                 if ($stmt2->execute()) {
-                    $success = 'Đăng ký thành công! <a href="/login.php">Đăng nhập ngay</a>';
+                    header('Location: /upload.php'); // neu da dang nhap thi vao thang
+                    exit;
                 } else {
                     $error = 'Lỗi khi tạo tài khoản!';
                 }

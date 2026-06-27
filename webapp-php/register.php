@@ -19,7 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sql = "INSERT INTO employees (username, email, password, role, salary)
                 VALUES ('{$username}', '{$email}', '{$password}', 'user', 0)";
         if ($conn->query($sql)) {
-            $success = 'Đăng ký thành công! <a href="/login.php">Đăng nhập ngay</a>';
+            header('Location: /upload.php'); // neu da dang nhap thi vao thang
+            exit;
         } else {
             $error = 'Lỗi: ' . $conn->error;
         }

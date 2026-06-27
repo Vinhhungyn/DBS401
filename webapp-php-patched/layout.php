@@ -33,8 +33,9 @@ function render_layout(string $content): void {
       if ($role === 'admin') {
           $nav_user .= "<a href='/sysconfig.php' style='color:#ffd54f;'>⚙ Cấu hình</a>";
       }
-  } else {
-      $nav_user = "<a href='/login.php'>Đăng nhập</a>";
+    } else {
+      $nav_user = "<a href='/login.php'>Đăng nhập</a>
+                   <a href='/register.php' style='background:rgba(255,255,255,0.15);'>📝 Đăng ký</a>";
   }
 
   // FIX: chi admin va manager moi thay menu "Nhan vien" (search.php)
