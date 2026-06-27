@@ -19,24 +19,25 @@ if (!isset($_SESSION['user'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
     $file     = $_FILES['file'];
     $filename = basename($file['name']);
+    $ext      = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+    $allowed  = ['jpg', 'jpeg', 'png'];
     $upload_dir = __DIR__ . '/uploads/';
 
-    // Tao thu muc uploads neu chua co
-    if (!is_dir($upload_dir)) {
-        mkdir($upload_dir, 0777, true);
-    }
-
-    // LO HONG CO Y: khong kiem tra extension, khong kiem tra MIME type
-    // Cho phep upload bat ky loai file ke ca .php
-    $dest = $upload_dir . $filename;
-
-    if (move_uploaded_file($file['tmp_name'], $dest)) {
-        $uploaded_url = '/uploads/' . $filename;
-        $message  = "Upload thành công! File: <a href='{$uploaded_url}' target='_blank'>{$filename}</a>";
-        $msg_type = 'success';
-    } else {
-        $message  = 'Upload thất bại!';
+    if (!in_array($ext, $allowed)) {
+        $message  = 'Chỉ chấp nhận ảnh: jpg, jpeg, png!';
         $msg_type = 'danger';
+    } else {
+        if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
+        $safe_name = uniqid('file_', true) . '.' . $ext;
+        $dest = $upload_dir . $safe_name;
+        if (move_uploaded_file($file['tmp_name'], $dest)) {
+            $uploaded_url = '/uploads/' . $safe_name;
+            $message  = "Upload thành công! File: <a href='{$uploaded_url}' target='_blank'>{$safe_name}</a>";
+            $msg_type = 'success';
+        } else {
+            $message  = 'Upload thất bại!';
+            $msg_type = 'danger';
+        }
     }
 }
 

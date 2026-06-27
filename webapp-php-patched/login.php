@@ -1,18 +1,10 @@
 <?php
-// ============================================================
-// login.php — Trang đăng nhập
-// Tương đương: @app.route("/login", methods=["GET","POST"])
-// LỖ HỔNG CỐ Ý: nối chuỗi thẳng vào SQL, không dùng prepared statement
-// LỖ HỔNG CỐ Ý: nối chuỗi thẳng vào SQL, không dùng prepared statement
-// LỖ HỔNG CỐ Ý: nối chuỗi thẳng vào SQL, không dùng prepared statement
-// LỖ HỔNG CỐ Ý: nối chuỗi thẳng vào SQL, không dùng prepared statement
-// LỖ HỔNG CỐ Ý: nối chuỗi thẳng vào SQL, không dùng prepared statement
-// ============================================================
+// login.php (port 5001 - PATCHED)
 require_once 'config.php';
 require_once 'layout.php';
 
-$error    = '';
-$success  = '';
+$error   = '';
+$success = '';
 $username = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -21,35 +13,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $conn = get_conn();
-        $sql = "SELECT id, username, role FROM employees WHERE username='{$username}' AND password='{$password}'";
-        $result = $conn->query($sql);
+        // Prepared statement - khong SQLi
+        $stmt = $conn->prepare("SELECT id, username, role, password FROM employees WHERE username = ?");
+        $stmt->bind_param("s", $username);
+        $stmt->execute();
+        $result = $stmt->get_result();
 
-        if ($result && $row = $result->fetch_row()) {
-            $_SESSION['user'] = $row[1];
-            $_SESSION['role'] = $row[2];
-            // LỖ HỔNG: set cookie role dựa trên role trong DB
-        
-            $conn->close();
-            header('Location: /search.php');
-            exit;
-        } else {
-            $error = 'Sai tên đăng nhập hoặc mật khẩu!';
+        if ($result && $row = $result->fetch_assoc()) {
+            // Kiem tra password hash
+            if (password_verify($password, $row['password'])) {
+                $_SESSION['user'] = $row['username'];
+                $_SESSION['role'] = $row['role'];
+                // Set cookie logged_in
+                setcookie('logged_in', '1', [
+                    'expires'  => time() + 3600,
+                    'path'     => '/',
+                    'httponly' => true,
+                    'samesite' => 'Lax',
+                ]);
+                $stmt->close();
+                $conn->close();
+                header('Location: /search.php');
+                exit;
+            }
         }
+        $error = 'Sai tên đăng nhập hoặc mật khẩu!';
+        $stmt->close();
         $conn->close();
     } catch (Exception $e) {
         $error = 'Lỗi hệ thống: ' . $e->getMessage();
     }
 }
-// ---- Render HTML ----
-$err_html = $error   ? '<div class="alert-danger">'  . htmlspecialchars($error)   . '</div>' : '';
-$suc_html = $success ? '<div class="alert-success">' . htmlspecialchars($success) . '</div>' : '';
+
+$err_html = $error ? '<div class="alert-danger">'  . htmlspecialchars($error) . '</div>' : '';
 $uval     = htmlspecialchars($username);
 
 $content = <<<HTML
 <div class="card" style="max-width:420px; margin:0 auto;">
   <h2>&#128100; Đăng nhập</h2>
   {$err_html}
-  {$suc_html}
   <form method="POST" action="/login.php">
     <label>Tên đăng nhập</label>
     <input type="text" name="username" placeholder="Nhập username..." value="{$uval}">
@@ -57,7 +59,6 @@ $content = <<<HTML
     <input type="password" name="password" placeholder="Nhập mật khẩu...">
     <button type="submit" style="width:100%;">Đăng nhập</button>
   </form>
- 
 </div>
 HTML;
 

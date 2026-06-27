@@ -21,20 +21,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $conn = get_conn();
-        $sql = "SELECT id, username, role FROM employees WHERE username='{$username}' AND password='{$password}'";
-        $result = $conn->query($sql);
+        $stmt = $conn->prepare("SELECT id, username, role FROM employees WHERE username = ? AND password = ?");
+        $stmt->bind_param("ss", $username, $password);
+        $stmt->execute();
+        $result = $stmt->get_result();
 
         if ($result && $row = $result->fetch_row()) {
             $_SESSION['user'] = $row[1];
             $_SESSION['role'] = $row[2];
             // LỖ HỔNG: set cookie role dựa trên role trong DB
             setcookie('role', $row[2], 0, '/');
+            $stmt->close();
             $conn->close();
             header('Location: /search.php');
             exit;
         } else {
             $error = 'Sai tên đăng nhập hoặc mật khẩu!';
         }
+        $stmt->close();
         $conn->close();
     } catch (Exception $e) {
         $error = 'Lỗi hệ thống: ' . $e->getMessage();

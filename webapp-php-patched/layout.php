@@ -24,8 +24,9 @@ function render_layout(string $content): void {
       if ($role === 'admin') {
           $nav_user .= "<a href='/sysconfig.php' style='color:#ffd54f;'>⚙ Cấu hình</a>";
       }
-  } else {
-      $nav_user = "<a href='/login.php'>Đăng nhập</a>";
+    } else {
+      $nav_user = "<a href='/login.php'>Đăng nhập</a>
+                   <a href='/register.php' style='background:rgba(255,255,255,0.15);'>📝 Đăng ký</a>";
   }
 
   echo <<<HTML
@@ -328,6 +329,7 @@ function render_layout(string $content): void {
     <a href="/search.php">👥 Nhân viên</a>
     <a href="/upload.php">📎 Tài liệu</a>
     <a href="/feedback.php">💬 Phản hồi</a>
+
     <div class="navbar-divider"></div>
     {$nav_user}
   </div>

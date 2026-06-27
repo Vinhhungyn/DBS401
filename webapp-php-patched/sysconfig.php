@@ -2,11 +2,16 @@
 // ============================================================
 // sysconfig.php — Hiển thị cấu hình hệ thống
 // Tương đương: @app.route("/config")
-// LỖ HỔNG CỐ Ý: lộ thông tin kết nối DB & secret key ra ngoài
-// (đặt tên sysconfig.php để không trùng với config.php)
+// ĐÃ FIX: yêu cầu đăng nhập + quyền admin mới được xem
 // ============================================================
 require_once 'config.php';
 require_once 'layout.php';
+
+// Chặn truy cập nếu chưa đăng nhập hoặc không phải admin
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+    http_response_code(403);
+    die('<h2>403 Forbidden</h2><p>Bạn không có quyền truy cập trang này.</p>');
+}
 
 $content = '
 <div class="card">

@@ -1,7 +1,7 @@
 <?php
 // ============================================================
-// profile.php — Trang cá nhân + upload avatar
-// LỖ HỔNG CỐ Ý: upload không kiểm tra loại file
+// profile.php (port 5001 - PATCHED)
+// Fix: whitelist extension, prepared statement, rename file
 // ============================================================
 require_once 'config.php';
 require_once 'layout.php';
@@ -15,44 +15,61 @@ $message  = '';
 $msg_type = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar'])) {
-    $file     = $_FILES['avatar'];
-    $filename = basename($file['name']);
+    $file    = $_FILES['avatar'];
+    $ext     = strtolower(pathinfo(basename($file['name']), PATHINFO_EXTENSION));
+    $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
     $upload_dir = __DIR__ . '/uploads/';
 
-    if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-
-    // LỖ HỔNG CỐ Ý: không kiểm tra extension, cho phép upload .php
-    $dest = $upload_dir . $filename;
-    if (move_uploaded_file($file['tmp_name'], $dest)) {
-        $_SESSION['avatar'] = $filename;
-        $message  = "Cập nhật ảnh đại diện thành công!";
-        $msg_type = 'success';
-    } else {
-        $message  = 'Upload thất bại!';
+    if (!in_array($ext, $allowed)) {
+        $message  = 'Chỉ chấp nhận: jpg, jpeg, png, gif, webp!';
         $msg_type = 'danger';
+    } elseif ($file['size'] > 2 * 1024 * 1024) {
+        $message  = 'File quá lớn! Tối đa 2MB.';
+        $msg_type = 'danger';
+    } else {
+        if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
+
+        // Doi ten file ngau nhien, tranh ghi de va path traversal
+        $safe_name = uniqid('avatar_', true) . '.' . $ext;
+        $dest = $upload_dir . $safe_name;
+
+        if (move_uploaded_file($file['tmp_name'], $dest)) {
+            // Xoa avatar cu neu co
+            if (!empty($_SESSION['avatar'])) {
+                $old = $upload_dir . $_SESSION['avatar'];
+                if (is_file($old)) unlink($old);
+            }
+            $_SESSION['avatar'] = $safe_name;
+            $message  = 'Cập nhật ảnh đại diện thành công!';
+            $msg_type = 'success';
+        } else {
+            $message  = 'Upload thất bại!';
+            $msg_type = 'danger';
+        }
     }
 }
 
 $user   = $_SESSION['user'];
-$role   = $_COOKIE['role'] ?? ($_SESSION['role'] ?? 'user');
 $avatar = $_SESSION['avatar'] ?? null;
 $initial = strtoupper(substr($user, 0, 1));
 
-// Query thong tin tu DB
+// Prepared statement - khong SQLi
 $conn = get_conn();
-$sql  = "SELECT username, role, email, salary FROM employees WHERE username='{$user}'";
-$res  = $conn->query($sql);
-$info = $res ? $res->fetch_assoc() : [];
+$stmt = $conn->prepare("SELECT username, role, email, salary FROM employees WHERE username = ?");
+$stmt->bind_param("s", $user);
+$stmt->execute();
+$info = $stmt->get_result()->fetch_assoc() ?: [];
+$stmt->close();
 $conn->close();
 
-$msg_html = $message ? "<div class='alert-{$msg_type}'>{$message}</div>" : '';
+// Role lay tu SESSION (khong lay tu cookie de tranh tamper)
+$role = $_SESSION['role'] ?? 'user';
 
-$avatar_src = $avatar
-    ? "/uploads/{$avatar}"
-    : null;
+$msg_html = $message ? "<div class='alert-{$msg_type}'>" . htmlspecialchars($message) . "</div>" : '';
 
+$avatar_src  = $avatar ? "/uploads/{$avatar}" : null;
 $avatar_html = $avatar_src
-    ? "<img src='{$avatar_src}' style='width:100%;height:100%;object-fit:cover;'>"
+    ? "<img src='" . htmlspecialchars($avatar_src) . "' style='width:100%;height:100%;object-fit:cover;'>"
     : "<span style='font-size:48px;font-weight:700;color:white;'>{$initial}</span>";
 
 $salary_fmt = isset($info['salary']) ? number_format($info['salary'], 0, '.', ',') . ' đ' : '-';
@@ -74,7 +91,6 @@ $content = <<<HTML
   <!-- AVATAR CARD -->
   <div>
     <div class="card" style="text-align:center;">
-      <!-- Avatar -->
       <div style="width:100px;height:100px;border-radius:50%;
                   background:linear-gradient(135deg,#2563eb,#0ea5e9);
                   margin:0 auto 16px;overflow:hidden;
@@ -88,7 +104,6 @@ $content = <<<HTML
 
       {$msg_html}
 
-      <!-- Upload form -->
       <form method="POST" enctype="multipart/form-data">
         <label for="avatar_input" style="
           display:block; width:100%;
@@ -102,10 +117,11 @@ $content = <<<HTML
           📷 Chọn ảnh đại diện
         </label>
         <input type="file" name="avatar" id="avatar_input" style="display:none;"
+               accept=".jpg,.jpeg,.png,.gif,.webp"
                onchange="this.form.submit()">
       </form>
 
-      <p class="hint">Hỗ trợ: JPG, PNG, GIF</p>
+      <p class="hint">Hỗ trợ: JPG, PNG, GIF, WEBP · Tối đa 2MB</p>
     </div>
   </div>
 
@@ -120,15 +136,6 @@ $content = <<<HTML
         <tr><td>Vai trò</td><td>{$role_badge}</td></tr>
         <tr><td>Lương</td><td>{$salary_fmt}</td></tr>
       </table>
-    </div>
-
-    <!-- Shell info if uploaded -->
-    <div class="card" style="background:#fff8e1; border-color:#fde68a;">
-      <h2 style="color:#b45309;">💡 Ghi chú hệ thống</h2>
-      <p style="font-size:14px;color:#78350f;">
-        Ảnh đại diện sau khi upload sẽ lưu tại: <code>/uploads/[tên file]</code><br>
-        Có thể truy cập trực tiếp qua URL: <code>http://localhost:5000/uploads/[tên file]</code>
-      </p>
     </div>
   </div>
 

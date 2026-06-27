@@ -14,24 +14,41 @@ if (!isset($_SESSION['user'])) {
 $message  = '';
 $msg_type = '';
 
+// Thay đoạn upload cũ bằng:
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar'])) {
-    $file     = $_FILES['avatar'];
-    $filename = basename($file['name']);
-    $upload_dir = __DIR__ . '/uploads/';
+  $file     = $_FILES['avatar'];
+  $filename = basename($file['name']);
+  $ext      = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+  $allowed  = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+  $upload_dir = __DIR__ . '/uploads/';
 
-    if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-
-    // LỖ HỔNG CỐ Ý: không kiểm tra extension, cho phép upload .php
-    $dest = $upload_dir . $filename;
-    if (move_uploaded_file($file['tmp_name'], $dest)) {
-        $_SESSION['avatar'] = $filename;
-        $message  = "Cập nhật ảnh đại diện thành công!";
-        $msg_type = 'success';
-    } else {
-        $message  = 'Upload thất bại!';
-        $msg_type = 'danger';
-    }
+  if (!in_array($ext, $allowed)) {
+      $message  = 'Chỉ chấp nhận ảnh: jpg, jpeg, png, gif, webp!';
+      $msg_type = 'danger';
+  } else {
+      if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
+      // Doi ten file an toan
+      $safe_name = uniqid('avatar_', true) . '.' . $ext;
+      $dest = $upload_dir . $safe_name;
+      if (move_uploaded_file($file['tmp_name'], $dest)) {
+          $_SESSION['avatar'] = $safe_name;
+          $message  = 'Cập nhật ảnh đại diện thành công!';
+          $msg_type = 'success';
+      } else {
+          $message  = 'Upload thất bại!';
+          $msg_type = 'danger';
+      }
+  }
 }
+
+// Thay đoạn query DB cũ bằng prepared statement:
+$conn = get_conn();
+$stmt = $conn->prepare("SELECT username, role, email, salary FROM employees WHERE username = ?");
+$stmt->bind_param("s", $user);
+$stmt->execute();
+$info = $stmt->get_result()->fetch_assoc() ?: [];
+$stmt->close();
+$conn->close();
 
 $user   = $_SESSION['user'];
 $role   = $_COOKIE['role'] ?? ($_SESSION['role'] ?? 'user');
