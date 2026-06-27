@@ -1,21 +1,18 @@
 <?php
 // register.php (port 5001 - PATCHED)
-// An toan: prepared statement, KHONG hash (dong bo voi DB plaintext)
 require_once 'config.php';
 require_once 'layout.php';
 
 $error   = '';
 $success = '';
 $username = '';
-$email    = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
-    $email    = trim($_POST['email']    ?? '');
     $password = $_POST['password']      ?? '';
     $confirm  = $_POST['confirm']       ?? '';
 
-    if (!$username || !$email || !$password) {
+    if (!$username || !$password) {
         $error = 'Vui lòng điền đầy đủ thông tin!';
     } elseif ($password !== $confirm) {
         $error = 'Mật khẩu xác nhận không khớp!';
@@ -24,8 +21,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $conn = get_conn();
-
-            // Kiem tra username ton tai
             $stmt = $conn->prepare("SELECT id FROM employees WHERE username = ?");
             $stmt->bind_param("s", $username);
             $stmt->execute();
@@ -38,15 +33,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->close();
                 $role   = 'user';
                 $salary = 0;
+                $email  = '';
 
-                // Prepared statement - luu plaintext (dong bo DB)
                 $stmt2 = $conn->prepare(
                     "INSERT INTO employees (username, email, password, role, salary) VALUES (?, ?, ?, ?, ?)"
                 );
                 $stmt2->bind_param("ssssi", $username, $email, $password, $role, $salary);
                 if ($stmt2->execute()) {
-                    header('Location: /upload.php'); // neu da dang nhap thi vao thang
-                    exit;
+                    $success = 'Đăng ký thành công! <a href="/login.php">Đăng nhập ngay</a>';
                 } else {
                     $error = 'Lỗi khi tạo tài khoản!';
                 }
@@ -54,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $conn->close();
         } catch (Exception $e) {
-            $error = 'Lỗi hệ thống: ' . $e->getMessage();
+            $error = 'Lỗi hệ thống.';
         }
     }
 }
@@ -62,7 +56,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $err_html = $error   ? '<div class="alert-danger">'  . htmlspecialchars($error)   . '</div>' : '';
 $suc_html = $success ? '<div class="alert-success">' . $success . '</div>' : '';
 $uval     = htmlspecialchars($username);
-$eval     = htmlspecialchars($email);
 
 $content = <<<HTML
 <div class="card" style="max-width:420px; margin:0 auto;">
@@ -71,9 +64,7 @@ $content = <<<HTML
   {$suc_html}
   <form method="POST" action="/register.php">
     <label>Tên đăng nhập</label>
-    <input type="text" name="username" value="{$uval}" placeholder="Nhập username...">
-    <label>Email</label>
-    <input type="email" name="email" value="{$eval}" placeholder="Nhập email...">
+    <input type="text" name="username" value="{$uval}" placeholder="Tối thiểu 3 ký tự, chỉ a-z, 0-9, _">
     <label>Mật khẩu</label>
     <input type="password" name="password" placeholder="Tối thiểu 6 ký tự...">
     <label>Xác nhận mật khẩu</label>

@@ -3,8 +3,7 @@
 require_once 'config.php';
 require_once 'layout.php';
 
-$error   = '';
-$success = '';
+$error    = '';
 $username = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -13,33 +12,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $conn = get_conn();
-        // Prepared statement - khong SQLi
         $stmt = $conn->prepare("SELECT id, username, role, password FROM employees WHERE username = ?");
         $stmt->bind_param("s", $username);
         $stmt->execute();
         $result = $stmt->get_result();
 
         if ($result && $row = $result->fetch_assoc()) {
-            // Kiem tra password hash
             if ($password === $row['password']) {
                 $_SESSION['user'] = $row['username'];
                 $_SESSION['role'] = $row['role'];
-                // Tao JWT token
+
                 require_once 'jwt.php';
                 $token = jwt_create($row['username'], $row['role']);
-                setcookie('token', $token, time() + 3600, '/', '', false, true);
-                // Set cookie logged_in
+
+                // Cookie token - httponly, samesite Strict
+                setcookie('token', $token, [
+                    'expires'  => time() + 3600,
+                    'path'     => '/',
+                    'httponly' => true,
+                    'samesite' => 'Strict',
+                ]);
+
+                // Cookie logged_in
                 setcookie('logged_in', '1', [
                     'expires'  => time() + 3600,
                     'path'     => '/',
                     'httponly' => true,
-                    'samesite' => 'Lax',
+                    'samesite' => 'Strict',
                 ]);
-                    $stmt->close();
-                    $conn->close();
 
-                // FIX: redirect theo role - admin/manager vao search.php,
-                // user thuong vao upload.php (khong co quyen xem danh sach nhan vien)
+                $stmt->close();
+                $conn->close();
+
                 if (in_array($row['role'], ['admin', 'manager'], true)) {
                     header('Location: /search.php');
                 } else {
@@ -52,11 +56,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->close();
         $conn->close();
     } catch (Exception $e) {
-        $error = 'Lỗi hệ thống: ' . $e->getMessage();
+        $error = 'Lỗi hệ thống.';
     }
 }
 
-$err_html = $error ? '<div class="alert-danger">'  . htmlspecialchars($error) . '</div>' : '';
+$err_html = $error ? '<div class="alert-danger">' . htmlspecialchars($error) . '</div>' : '';
 $uval     = htmlspecialchars($username);
 
 $content = <<<HTML

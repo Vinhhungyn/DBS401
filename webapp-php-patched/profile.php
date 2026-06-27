@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // profile.php (port 5001 - PATCHED)
-// Fix: whitelist extension, prepared statement, rename file
+// Fix: whitelist ext, MIME check, prepared statement, escape email
 // ============================================================
 require_once 'config.php';
 require_once 'layout.php';
@@ -20,21 +20,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar'])) {
     $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
     $upload_dir = __DIR__ . '/uploads/';
 
+    // Kiem tra MIME type thuc su bang getimagesize()
+    $img_info = @getimagesize($file['tmp_name']);
+
     if (!in_array($ext, $allowed)) {
         $message  = 'Chỉ chấp nhận: jpg, jpeg, png, gif, webp!';
+        $msg_type = 'danger';
+    } elseif (!$img_info) {
+        $message  = 'File không phải ảnh hợp lệ!';
         $msg_type = 'danger';
     } elseif ($file['size'] > 2 * 1024 * 1024) {
         $message  = 'File quá lớn! Tối đa 2MB.';
         $msg_type = 'danger';
     } else {
         if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
-
-        // Doi ten file ngau nhien, tranh ghi de va path traversal
         $safe_name = uniqid('avatar_', true) . '.' . $ext;
         $dest = $upload_dir . $safe_name;
 
         if (move_uploaded_file($file['tmp_name'], $dest)) {
-            // Xoa avatar cu neu co
             if (!empty($_SESSION['avatar'])) {
                 $old = $upload_dir . $_SESSION['avatar'];
                 if (is_file($old)) unlink($old);
@@ -49,8 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar'])) {
     }
 }
 
-$user   = $_SESSION['user'];
-$avatar = $_SESSION['avatar'] ?? null;
+$user    = $_SESSION['user'];
+$avatar  = $_SESSION['avatar'] ?? null;
 $initial = strtoupper(substr($user, 0, 1));
 
 // Prepared statement - khong SQLi
@@ -62,7 +65,6 @@ $info = $stmt->get_result()->fetch_assoc() ?: [];
 $stmt->close();
 $conn->close();
 
-// Role lay tu SESSION (khong lay tu cookie de tranh tamper)
 $role = $_SESSION['role'] ?? 'user';
 
 $msg_html = $message ? "<div class='alert-{$msg_type}'>" . htmlspecialchars($message) . "</div>" : '';
@@ -73,6 +75,9 @@ $avatar_html = $avatar_src
     : "<span style='font-size:48px;font-weight:700;color:white;'>{$initial}</span>";
 
 $salary_fmt = isset($info['salary']) ? number_format($info['salary'], 0, '.', ',') . ' đ' : '-';
+
+// Escape email tranh Stored XSS
+$safe_email = htmlspecialchars($info['email'] ?? '', ENT_QUOTES, 'UTF-8');
 
 $role_badge = match($role) {
     'admin'   => "<span class='badge badge-admin'>Admin</span>",
@@ -132,7 +137,7 @@ $content = <<<HTML
       <table>
         <tr><th>Tham số</th><th>Giá trị</th></tr>
         <tr><td>Username</td><td><b>{$user}</b></td></tr>
-        <tr><td>Email</td><td>{$info['email']}</td></tr>
+        <tr><td>Email</td><td>{$safe_email}</td></tr>
         <tr><td>Vai trò</td><td>{$role_badge}</td></tr>
         <tr><td>Lương</td><td>{$salary_fmt}</td></tr>
       </table>

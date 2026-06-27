@@ -1,31 +1,44 @@
 <?php
-// ============================================================
-// feedback.php — Trang gửi phản hồi nội bộ (ĐÃ VÁ XSS)
-// Fix: escape tất cả output bằng htmlspecialchars()
-// ============================================================
+// feedback.php (port 5001 - PATCHED)
 require_once 'config.php';
 require_once 'layout.php';
 
-$message = '';
+// Auth check
+if (!isset($_SESSION['user'])) {
+    header('Location: /login.php');
+    exit;
+}
+
+$message  = '';
 $msg_type = '';
 
 if (!isset($_SESSION['feedbacks'])) $_SESSION['feedbacks'] = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name    = $_POST['name']    ?? '';
-    $comment = $_POST['comment'] ?? '';
-    if ($name && $comment) {
+    $name    = trim($_POST['name']    ?? '');
+    $comment = trim($_POST['comment'] ?? '');
+
+    if (!$name || !$comment) {
+        $message  = 'Vui lòng điền đầy đủ thông tin!';
+        $msg_type = 'danger';
+    } elseif (strlen($name) > 100) {
+        $message  = 'Họ tên không được quá 100 ký tự!';
+        $msg_type = 'danger';
+    } elseif (strlen($comment) > 1000) {
+        $message  = 'Nội dung không được quá 1000 ký tự!';
+        $msg_type = 'danger';
+    } else {
         $_SESSION['feedbacks'][] = [
             'name'    => $name,
             'comment' => $comment,
             'time'    => date('H:i:s d/m/Y'),
         ];
-        $message  = "Gửi phản hồi thành công!";
+        $message  = 'Gửi phản hồi thành công!';
         $msg_type = 'success';
     }
 }
 
-// DA VA: Reflected XSS - escape output
+// Reflected XSS - escape output
 $search     = $_GET['search'] ?? '';
 $search_msg = '';
 if ($search !== '') {
@@ -33,9 +46,9 @@ if ($search !== '') {
     $search_msg  = "<div class='alert-success'>Tìm kiếm: <b>{$safe_search}</b></div>";
 }
 
-$msg_html = $message ? "<div class='alert-{$msg_type}'>{$message}</div>" : '';
+$msg_html = $message ? "<div class='alert-{$msg_type}'>" . htmlspecialchars($message) . "</div>" : '';
 
-// DA VA: escape toan bo output
+// Stored XSS - escape toan bo output
 $feedback_html = '';
 foreach (array_reverse($_SESSION['feedbacks']) as $fb) {
     $safe_name    = htmlspecialchars($fb['name'],    ENT_QUOTES, 'UTF-8');
@@ -59,20 +72,17 @@ $content = <<<HTML
     <button type="submit">Tìm</button>
   </form>
   {$search_msg}
-  <p style="font-size:12px;color:#2e7d32;margin-top:8px;">
-  
-  </p>
 </div>
 
 <div class="card">
   <h2>Gửi phản hồi mới</h2>
   {$msg_html}
   <form method="POST">
-    <label>Họ tên</label>
-    <input type="text" name="name" placeholder="Nhập họ tên...">
-    <label>Nội dung</label>
-    <textarea name="comment" rows="4" placeholder="Nhập nội dung..."
-      style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;font-size:15px;resize:vertical;"></textarea>
+    <label>Họ tên <span style="color:#999;font-weight:400;">(tối đa 100 ký tự)</span></label>
+    <input type="text" name="name" placeholder="Nhập họ tên..." maxlength="100">
+    <label>Nội dung <span style="color:#999;font-weight:400;">(tối đa 1000 ký tự)</span></label>
+    <textarea name="comment" rows="4" placeholder="Nhập nội dung..." maxlength="1000"
+      style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:15px;resize:vertical;font-family:inherit;"></textarea>
     <button type="submit" style="margin-top:12px;">Gửi phản hồi</button>
   </form>
 </div>
