@@ -1,9 +1,4 @@
 <?php
-// ============================================================
-// profile.php — Trang cá nhân + upload avatar
-// LỖ HỔNG CỐ Ý: upload không kiểm tra loại file -> webshell
-// LỖ HỔNG CỐ Ý: SQL nối chuỗi trực tiếp
-// ============================================================
 require_once 'config.php';
 require_once 'layout.php';
 
@@ -18,16 +13,14 @@ $msg_type = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar'])) {
     $file       = $_FILES['avatar'];
     $filename   = basename($file['name']);
-    $ext        = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
     $upload_dir = __DIR__ . '/uploads/';
 
-    // LỖ HỔNG CỐ Ý: không kiểm tra loại file, cho phép upload .php webshell
+    // LỖ HỔNG CỐ Ý: không kiểm tra loại file, KHÔNG đổi tên -> giữ nguyên filename gốc
     if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
-    $safe_name = uniqid('avatar_', true) . '.' . $ext;
-    $dest      = $upload_dir . $safe_name;
+    $dest = $upload_dir . $filename;
     if (move_uploaded_file($file['tmp_name'], $dest)) {
-        $_SESSION['avatar'] = $safe_name;
-        $message  = 'Cập nhật ảnh đại diện thành công! File: <a href="/uploads/' . $safe_name . '" target="_blank">' . $safe_name . '</a>';
+        $_SESSION['avatar'] = $filename;
+        $message  = 'Cập nhật ảnh đại diện thành công! File: <a href="/uploads/' . $filename . '" target="_blank">' . $filename . '</a>';
         $msg_type = 'success';
     } else {
         $message  = 'Upload thất bại!';
