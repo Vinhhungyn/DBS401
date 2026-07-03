@@ -36,18 +36,19 @@ CREATE TABLE secret_data (
 
 -- ============================================================
 -- 2. NHAP DU LIEU MAU - PASSWORD DA BCRYPT HASH
--- FIX: dung password_hash($plain, PASSWORD_BCRYPT) de tao hash
--- admin123   -> $2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi
--- alice456   -> $2y$10$TKh8H1.PfQx37YgCzwiKb.KjNyWgaHb9cbcoQgdIVFlYg7B77UdFm
--- bob789     -> $2y$10$yQXNMhiDVFPCv0E7nSQ4.OvWFMiGgGqT3FXsAZ.5F5E3bGl3.xMme
--- charlie000 -> $2y$10$N0/j5YtMKUrjrR.YXHM9/e9f.P8pBBGZLVJ5GR1hZMVuEcRk6sJmm
+-- FIX: hash duoc generate bang PHP password_hash($plain, PASSWORD_BCRYPT)
+-- chay trong chinh container webapp_protected de dam bao dung
+-- admin123   -> $2y$10$HIFdWVxSryd14aL7MkQFY.H9.CQNLQA6FDyeONV.XL2tB6ghpDy32
+-- alice456   -> $2y$10$Y2nlLQf/WRilYcgCkmdzkuUfZ4wMtm8JtIX8MS8.lE2nhVMBGh8TG
+-- bob789     -> $2y$10$uss5lXLIS5nroCSI4vKoj.RU4sXxYkpGZqOKlIKSi1qwQFenPIxTW
+-- charlie000 -> $2y$10$ob4vQOtV/T9RrLu6jNkxCeNx4uzIgUa2nTFRSGPFB8WYcfcrGxG92
 -- ============================================================
 
 INSERT INTO employees (username, password, role, salary, email) VALUES
-('admin',   '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin',   9000000, 'admin@company.vn'),
-('alice',   '$2y$10$TKh8H1.PfQx37YgCzwiKb.KjNyWgaHb9cbcoQgdIVFlYg7B77UdFm', 'user',    5000000, 'alice@company.vn'),
-('bob',     '$2y$10$yQXNMhiDVFPCv0E7nSQ4.OvWFMiGgGqT3FXsAZ.5F5E3bGl3.xMme', 'user',    4500000, 'bob@company.vn'),
-('charlie', '$2y$10$N0/j5YtMKUrjrR.YXHM9/e9f.P8pBBGZLVJ5GR1hZMVuEcRk6sJmm', 'manager', 7000000, 'charlie@company.vn');
+('admin',   '$2y$10$HIFdWVxSryd14aL7MkQFY.H9.CQNLQA6FDyeONV.XL2tB6ghpDy32', 'admin',   9000000, 'admin@company.vn'),
+('alice',   '$2y$10$Y2nlLQf/WRilYcgCkmdzkuUfZ4wMtm8JtIX8MS8.lE2nhVMBGh8TG', 'user',    5000000, 'alice@company.vn'),
+('bob',     '$2y$10$uss5lXLIS5nroCSI4vKoj.RU4sXxYkpGZqOKlIKSi1qwQFenPIxTW', 'user',    4500000, 'bob@company.vn'),
+('charlie', '$2y$10$ob4vQOtV/T9RrLu6jNkxCeNx4uzIgUa2nTFRSGPFB8WYcfcrGxG92', 'manager', 7000000, 'charlie@company.vn');
 
 INSERT INTO transactions (from_user, to_user, amount) VALUES
 ('alice',   'bob',     500000),
