@@ -35,7 +35,7 @@ services:
       MYSQL_ROOT_PASSWORD: root123
       MYSQL_DATABASE: company_db_patched
     ports:
-      - "3308:3306"
+      - "3309:3306"
     volumes:
       - ./sql/init_patched.sql:/docker-entrypoint-initdb.d/init_patched.sql
       - mysql_patched_data:/var/lib/mysql
