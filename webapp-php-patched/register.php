@@ -6,9 +6,10 @@ require_once 'layout.php';
 $error   = '';
 $success = '';
 $username = '';
-
+$email    = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
+    $email    = trim($_POST['email']    ?? '');  
     $password = $_POST['password']      ?? '';
     $confirm  = $_POST['confirm']       ?? '';
 
@@ -56,6 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $err_html = $error   ? '<div class="alert-danger">'  . htmlspecialchars($error)   . '</div>' : '';
 $suc_html = $success ? '<div class="alert-success">' . $success . '</div>' : '';
 $uval     = htmlspecialchars($username);
+$eval     = htmlspecialchars($email);
 
 $content = <<<HTML
 <div class="card" style="max-width:420px; margin:0 auto;">
@@ -65,6 +67,8 @@ $content = <<<HTML
   <form method="POST" action="/register.php">
     <label>Tên đăng nhập</label>
     <input type="text" name="username" value="{$uval}" placeholder="Tối thiểu 3 ký tự, chỉ a-z, 0-9, _">
+    <label>Email</label>
+    <input type="email" name="email" value="{$eval}" placeholder="Nhập email...">
     <label>Mật khẩu</label>
     <input type="password" name="password" placeholder="Tối thiểu 6 ký tự...">
     <label>Xác nhận mật khẩu</label>

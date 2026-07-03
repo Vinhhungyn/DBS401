@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result && $row = $result->fetch_row()) {
             $_SESSION['user'] = $row[1];
             $_SESSION['role'] = $row[2];
-            setcookie('role', $row[2], 0, '/');
+        
             require_once 'jwt.php';
             $token = jwt_create($row[1], $row[2]);
             setcookie('token', $token, 0, '/');

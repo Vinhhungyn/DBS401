@@ -33,7 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $err_html = $error   ? '<div class="alert-danger">'  . htmlspecialchars($error)   . '</div>' : '';
 $suc_html = $success ? '<div class="alert-success">' . $success . '</div>' : '';
 $uval     = htmlspecialchars($username);
-$eval     = htmlspecialchars($email);
+$eval = htmlspecialchars($email);
+
 
 $content = <<<HTML
 <div class="card" style="max-width:420px; margin:0 auto;">
@@ -42,11 +43,13 @@ $content = <<<HTML
   {$suc_html}
   <form method="POST" action="/register.php">
     <label>Tên đăng nhập</label>
-    <input type="text" name="username" value="{$uval}" placeholder="Nhập username...">
+    <input type="text" name="username" value="{$uval}" placeholder="Tối thiểu 3 ký tự, chỉ a-z, 0-9, _">
     <label>Email</label>
     <input type="email" name="email" value="{$eval}" placeholder="Nhập email...">
     <label>Mật khẩu</label>
-    <input type="password" name="password" placeholder="Nhập mật khẩu...">
+    <input type="password" name="password" placeholder="Tối thiểu 6 ký tự...">
+    <label>Xác nhận mật khẩu</label>
+    <input type="password" name="confirm" placeholder="Nhập lại mật khẩu...">
     <button type="submit" style="width:100%;">Đăng ký</button>
   </form>
   <p class="hint">Đã có tài khoản? <a href="/login.php">Đăng nhập</a></p>

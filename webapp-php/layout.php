@@ -7,6 +7,8 @@ function render_layout(string $content): void {
   $user = $_SESSION['user'] ?? null;
 
   // FIX: doc role tu JWT token (da verify), khong con doc tu session/cookie rieng
+
+  
   $role = 'guest';
   if (isset($_COOKIE['token'])) {
       require_once 'jwt.php';
@@ -15,6 +17,7 @@ function render_layout(string $content): void {
           $role = $payload['role'];
       }
   }
+  //============================================================
   $avatar = $_SESSION['avatar'] ?? null;
 
   $nav_user = '';

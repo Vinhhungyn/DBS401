@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar'])) {
 }
 
 $user    = $_SESSION['user'];
-$role    = $_COOKIE['role'] ?? ($_SESSION['role'] ?? 'user');
+$role = $_SESSION['role'] ?? 'user';
 $avatar  = $_SESSION['avatar'] ?? null;
 $initial = strtoupper(substr($user, 0, 1));
 
