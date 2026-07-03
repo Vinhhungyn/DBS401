@@ -7,9 +7,10 @@ $error   = '';
 $success = '';
 $username = '';
 $email    = '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
-    $email    = trim($_POST['email']    ?? '');  
+    $email    = trim($_POST['email']    ?? '');
     $password = $_POST['password']      ?? '';
     $confirm  = $_POST['confirm']       ?? '';
 
@@ -34,12 +35,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->close();
                 $role   = 'user';
                 $salary = 0;
-                $email  = '';
+
+                // FIX: hash password bằng bcrypt trước khi lưu vào DB
+                // Vulnerable (5000): lưu $password plaintext trực tiếp — không an toàn
+                // Patched  (5001): password_hash() tạo bcrypt hash ($2y$10$...)
+                $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
                 $stmt2 = $conn->prepare(
                     "INSERT INTO employees (username, email, password, role, salary) VALUES (?, ?, ?, ?, ?)"
                 );
-                $stmt2->bind_param("ssssi", $username, $email, $password, $role, $salary);
+                $stmt2->bind_param("ssssi", $username, $email, $hashedPassword, $role, $salary);
                 if ($stmt2->execute()) {
                     $success = 'Đăng ký thành công! <a href="/login.php">Đăng nhập ngay</a>';
                 } else {

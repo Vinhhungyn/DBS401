@@ -1,19 +1,21 @@
 <?php
 // ============================================================
-// config.php — Cấu hình kết nối DB & khởi động session
-// Tương đương: biến DB_HOST/DB_USER/DB_PASS/DB_NAME trong app.py
+// config.php (port 5001 - PATCHED)
+// FIX: trỏ sang company_db_patched - DB riêng cho bên patched
+// Tách riêng để 2 side không ảnh hưởng nhau khi demo
 // ============================================================
 
 session_start();
 
-define('DB_HOST', getenv('DB_HOST') ?: 'mysql_vuln');
+define('DB_HOST', getenv('DB_HOST') ?: 'mysql-patched');
 define('DB_PORT', (int)(getenv('DB_PORT') ?: 3306));
 define('DB_USER', getenv('DB_USER') ?: 'app_user');
 define('DB_PASS', getenv('DB_PASS') ?: 'app123');
-define('DB_NAME', 'company_db');
+// FIX: dùng database riêng company_db_patched thay vì company_db
+define('DB_NAME', getenv('DB_NAME') ?: 'company_db_patched');
 
 /**
- * Tạo kết nối MySQL mới — tương đương hàm get_conn() trong app.py
+ * Tạo kết nối MySQL mới
  */
 function get_conn(): mysqli {
     $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);

@@ -1,5 +1,8 @@
 version: '3.8'
 services:
+  # ============================================================
+  # DB cho bên VULNERABLE (5000) - giữ password plaintext để demo SQLi
+  # ============================================================
   mysql-vulnerable:
     image: mysql:8.0
     container_name: mysql_vuln
@@ -12,6 +15,30 @@ services:
     volumes:
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
       - mysql_data:/var/lib/mysql
+      - mysql_log:/var/log/mysql
+    command: >
+      --general-log=1
+      --general-log-file=/var/log/mysql/general.log
+      --secure-file-priv=""
+    networks:
+      - dbnet
+
+  # ============================================================
+  # DB cho bên PATCHED (5001) - password bcrypt hash, tách riêng
+  # FIX: tách DB riêng để 2 side độc lập, không ảnh hưởng nhau
+  # ============================================================
+  mysql-patched:
+    image: mysql:8.0
+    container_name: mysql_patched
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: company_db_patched
+    ports:
+      - "3308:3306"
+    volumes:
+      - ./sql/init_patched.sql:/docker-entrypoint-initdb.d/init_patched.sql
+      - mysql_patched_data:/var/lib/mysql
       - mysql_log:/var/log/mysql
     command: >
       --general-log=1
@@ -49,12 +76,13 @@ services:
     ports:
       - "5001:80"
     environment:
-      DB_HOST: proxysql
-      DB_PORT: 6033
+      # FIX: trỏ sang mysql-patched thay vì proxysql, dùng DB riêng
+      DB_HOST: mysql-patched
+      DB_PORT: 3306
       DB_USER: app_user
       DB_PASS: app123
     depends_on:
-      - proxysql
+      - mysql-patched
     networks:
       - dbnet
 
@@ -94,6 +122,7 @@ services:
 volumes:
   apache_vuln_log:
   mysql_data:
+  mysql_patched_data:
   mysql_log:
   proxysql_log:
   apache_log:

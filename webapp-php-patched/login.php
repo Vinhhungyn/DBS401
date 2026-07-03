@@ -18,14 +18,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = $stmt->get_result();
 
         if ($result && $row = $result->fetch_assoc()) {
-            if ($password === $row['password']) {
+            // FIX: dùng password_verify() để so khớp bcrypt hash
+            // Vulnerable (5000): if ($password === $row['password'])  <-- so sánh plaintext, không an toàn
+            // Patched  (5001): password_verify() kiểm tra đúng bcrypt hash
+            if (password_verify($password, $row['password'])) {
                 $_SESSION['user'] = $row['username'];
                 $_SESSION['role'] = $row['role'];
 
                 require_once 'jwt.php';
                 $token = jwt_create($row['username'], $row['role']);
 
-                // Cookie token - httponly, samesite Strict
+                // Cookie token - HttpOnly, SameSite Strict
                 setcookie('token', $token, [
                     'expires'  => time() + 3600,
                     'path'     => '/',
