@@ -1,7 +1,6 @@
 <?php
 // ============================================================
 // login.php — Trang đăng nhập
-// Tương đương: @app.route("/login", methods=["GET","POST"])
 // LỖ HỔNG CỐ Ý: nối chuỗi thẳng vào SQL, không dùng prepared statement
 // ============================================================
 require_once 'config.php';
@@ -17,25 +16,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $conn = get_conn();
-        $stmt = $conn->prepare("SELECT id, username, role FROM employees WHERE username = ? AND password = ?");
-        $stmt->bind_param("ss", $username, $password);
-        $stmt->execute();
-        $result = $stmt->get_result();
+
+        // LỖ HỔNG CỐ Ý: nối chuỗi thẳng, không escape -> SQL Injection
+        $sql    = "SELECT id, username, role FROM employees WHERE username='{$username}' AND password='{$password}'";
+        $result = $conn->query($sql);
 
         if ($result && $row = $result->fetch_row()) {
             $_SESSION['user'] = $row[1];
             $_SESSION['role'] = $row[2];
-            // LỖ HỔNG: set cookie role dựa trên role trong DB
             setcookie('role', $row[2], 0, '/');
-            // Tao JWT token (vulnerable - secret key yeu)
             require_once 'jwt.php';
             $token = jwt_create($row[1], $row[2]);
             setcookie('token', $token, 0, '/');
-            $stmt->close();
             $conn->close();
 
-            // FIX: redirect theo role - admin/manager vao search.php,
-            // user thuong vao upload.php (khong co quyen xem danh sach nhan vien)
             if (in_array($row[2], ['admin', 'manager'], true)) {
                 header('Location: /search.php');
             } else {
@@ -44,14 +38,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         } else {
             $error = 'Sai tên đăng nhập hoặc mật khẩu!';
+            $conn->close();
         }
-        $stmt->close();
-        $conn->close();
     } catch (Exception $e) {
         $error = 'Lỗi hệ thống: ' . $e->getMessage();
     }
 }
-// ---- Render HTML ----
+
 $err_html = $error   ? '<div class="alert-danger">'  . htmlspecialchars($error)   . '</div>' : '';
 $suc_html = $success ? '<div class="alert-success">' . htmlspecialchars($success) . '</div>' : '';
 $uval     = htmlspecialchars($username);
@@ -68,7 +61,6 @@ $content = <<<HTML
     <input type="password" name="password" placeholder="Nhập mật khẩu...">
     <button type="submit" style="width:100%;">Đăng nhập</button>
   </form>
- 
 </div>
 HTML;
 

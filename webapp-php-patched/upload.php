@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
     $file     = $_FILES['file'];
     $filename = basename($file['name']);
     $ext      = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-    $allowed  = ['jpg', 'jpeg', 'png'];
+    $allowed = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png'];
     $upload_dir = __DIR__ . '/uploads/';
 
     if (!in_array($ext, $allowed)) {

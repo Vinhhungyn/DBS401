@@ -1,7 +1,8 @@
 <?php
 // ============================================================
 // profile.php — Trang cá nhân + upload avatar
-// LỖ HỔNG CỐ Ý: upload không kiểm tra loại file
+// LỖ HỔNG CỐ Ý: upload không kiểm tra loại file -> webshell
+// LỖ HỔNG CỐ Ý: SQL nối chuỗi trực tiếp
 // ============================================================
 require_once 'config.php';
 require_once 'layout.php';
@@ -14,48 +15,32 @@ if (!isset($_SESSION['user'])) {
 $message  = '';
 $msg_type = '';
 
-// Thay đoạn upload cũ bằng:
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar'])) {
-  $file     = $_FILES['avatar'];
-  $filename = basename($file['name']);
-  $ext      = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-  $allowed  = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-  $upload_dir = __DIR__ . '/uploads/';
+    $file       = $_FILES['avatar'];
+    $filename   = basename($file['name']);
+    $ext        = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+    $upload_dir = __DIR__ . '/uploads/';
 
-  if (!in_array($ext, $allowed)) {
-      $message  = 'Chỉ chấp nhận ảnh: jpg, jpeg, png, gif, webp!';
-      $msg_type = 'danger';
-  } else {
-      if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
-      // Doi ten file an toan
-      $safe_name = uniqid('avatar_', true) . '.' . $ext;
-      $dest = $upload_dir . $safe_name;
-      if (move_uploaded_file($file['tmp_name'], $dest)) {
-          $_SESSION['avatar'] = $safe_name;
-          $message  = 'Cập nhật ảnh đại diện thành công!';
-          $msg_type = 'success';
-      } else {
-          $message  = 'Upload thất bại!';
-          $msg_type = 'danger';
-      }
-  }
+    // LỖ HỔNG CỐ Ý: không kiểm tra loại file, cho phép upload .php webshell
+    if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
+    $safe_name = uniqid('avatar_', true) . '.' . $ext;
+    $dest      = $upload_dir . $safe_name;
+    if (move_uploaded_file($file['tmp_name'], $dest)) {
+        $_SESSION['avatar'] = $safe_name;
+        $message  = 'Cập nhật ảnh đại diện thành công! File: <a href="/uploads/' . $safe_name . '" target="_blank">' . $safe_name . '</a>';
+        $msg_type = 'success';
+    } else {
+        $message  = 'Upload thất bại!';
+        $msg_type = 'danger';
+    }
 }
 
-// Thay đoạn query DB cũ bằng prepared statement:
-$conn = get_conn();
-$stmt = $conn->prepare("SELECT username, role, email, salary FROM employees WHERE username = ?");
-$stmt->bind_param("s", $user);
-$stmt->execute();
-$info = $stmt->get_result()->fetch_assoc() ?: [];
-$stmt->close();
-$conn->close();
-
-$user   = $_SESSION['user'];
-$role   = $_COOKIE['role'] ?? ($_SESSION['role'] ?? 'user');
-$avatar = $_SESSION['avatar'] ?? null;
+$user    = $_SESSION['user'];
+$role    = $_COOKIE['role'] ?? ($_SESSION['role'] ?? 'user');
+$avatar  = $_SESSION['avatar'] ?? null;
 $initial = strtoupper(substr($user, 0, 1));
 
-// Query thong tin tu DB
+// LỖ HỔNG CỐ Ý: SQL nối chuỗi trực tiếp
 $conn = get_conn();
 $sql  = "SELECT username, role, email, salary FROM employees WHERE username='{$user}'";
 $res  = $conn->query($sql);
@@ -64,12 +49,8 @@ $conn->close();
 
 $msg_html = $message ? "<div class='alert-{$msg_type}'>{$message}</div>" : '';
 
-$avatar_src = $avatar
-    ? "/uploads/{$avatar}"
-    : null;
-
-$avatar_html = $avatar_src
-    ? "<img src='{$avatar_src}' style='width:100%;height:100%;object-fit:cover;'>"
+$avatar_html = $avatar
+    ? "<img src='/uploads/{$avatar}' style='width:100%;height:100%;object-fit:cover;'>"
     : "<span style='font-size:48px;font-weight:700;color:white;'>{$initial}</span>";
 
 $salary_fmt = isset($info['salary']) ? number_format($info['salary'], 0, '.', ',') . ' đ' : '-';
@@ -91,7 +72,6 @@ $content = <<<HTML
   <!-- AVATAR CARD -->
   <div>
     <div class="card" style="text-align:center;">
-      <!-- Avatar -->
       <div style="width:100px;height:100px;border-radius:50%;
                   background:linear-gradient(135deg,#2563eb,#0ea5e9);
                   margin:0 auto 16px;overflow:hidden;
@@ -105,7 +85,6 @@ $content = <<<HTML
 
       {$msg_html}
 
-      <!-- Upload form -->
       <form method="POST" enctype="multipart/form-data">
         <label for="avatar_input" style="
           display:block; width:100%;
@@ -122,7 +101,7 @@ $content = <<<HTML
                onchange="this.form.submit()">
       </form>
 
-      <p class="hint">Hỗ trợ: JPG, PNG, GIF</p>
+      <p class="hint">Hỗ trợ: JPG, PNG, GIF (tất cả định dạng)</p>
     </div>
   </div>
 
@@ -138,12 +117,9 @@ $content = <<<HTML
         <tr><td>Lương</td><td>{$salary_fmt}</td></tr>
       </table>
     </div>
-
-   
   </div>
 
 </div>
 HTML;
 
 render_layout($content);
-?>
