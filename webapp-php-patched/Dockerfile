@@ -27,9 +27,9 @@ RUN sed -i 's|CustomLog ${APACHE_LOG_DIR}/access.log combined|CustomLog /var/log
     && chown www-data:adm /var/log/apache2/access_real.log /var/log/apache2/error_real.log \
     && chmod 664 /var/log/apache2/access_real.log /var/log/apache2/error_real.log
 
-# FIX: ErrorDocument 403 -> error403.php xu ly redirect ve trang goc kem ?waf_block=1
-# Thay vi hien trang 403 trang cua Apache, PHP se hien thong bao loi tu nhien
-RUN sed -i '/<\/VirtualHost>/i\        ErrorDocument 403 /error403.php' /etc/apache2/sites-enabled/000-default.conf
+# FIX: them ErrorDocument 403 vao VirtualHost bang printf
+# Apache se tu goi error403.php khi ModSecurity deny,status:403
+RUN printf '\n    ErrorDocument 403 /error403.php\n' >> /etc/apache2/sites-enabled/000-default.conf
 
 # Ngan PHP thuc thi trong /uploads/
 RUN printf '<Directory /var/www/html/uploads>\n\
