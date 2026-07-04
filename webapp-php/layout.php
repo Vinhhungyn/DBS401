@@ -1,14 +1,11 @@
 <?php
 // ============================================================
-// layout.php — Base HTML layout
+// layout.php — Base HTML layout (port 5000 - VULNERABLE)
 // ============================================================
 
 function render_layout(string $content): void {
   $user = $_SESSION['user'] ?? null;
 
-  // FIX: doc role tu JWT token (da verify), khong con doc tu session/cookie rieng
-
-  
   $role = 'guest';
   if (isset($_COOKIE['token'])) {
       require_once 'jwt.php';
@@ -17,7 +14,7 @@ function render_layout(string $content): void {
           $role = $payload['role'];
       }
   }
-  //============================================================
+
   $avatar = $_SESSION['avatar'] ?? null;
 
   $nav_user = '';
@@ -31,24 +28,30 @@ function render_layout(string $content): void {
           {$avatar_html}
           <span style='font-size:14px;color:white;'>{$user}</span>
         </a>
-        <a href='/logout.php'>Đăng xuất</a>";
+        <a href='/logout.php'>Dang xuat</a>";
 
       if ($role === 'admin') {
-          $nav_user .= "<a href='/sysconfig.php' style='color:#ffd54f;'>⚙ Cấu hình</a>";
+          $nav_user .= "<a href='/sysconfig.php' style='color:#ffd54f;'>&#9881; Cau hinh</a>";
       }
-    } else {
-      $nav_user = "<a href='/login.php'>Đăng nhập</a>
-                   <a href='/register.php' style='background:rgba(255,255,255,0.15);'>📝 Đăng ký</a>";
+  } else {
+      $nav_user = "<a href='/login.php'>Dang nhap</a>
+                   <a href='/register.php' style='background:rgba(255,255,255,0.15);'>&#128221; Dang ky</a>";
   }
 
-  // FIX: chi admin va manager moi thay menu "Nhan vien" (search.php)
-  // user thuong khong duoc thay link nay
+  // Chi hien menu Nhan vien khi da dang nhap va la admin/manager
   $nav_search = '';
-  if (in_array($role, ['admin', 'manager'], true)) {
-      $nav_search = '<a href="/search.php">👥 Nhân viên</a>';
+  if ($user && in_array($role, ['admin', 'manager'], true)) {
+      $nav_search = '<a href="/search.php">&#128101; Nhan vien</a>';
   }
 
-  // FIX: link logo cung tro theo role, khong luon la search.php
+  // Chi hien Tai lieu va Phan hoi khi da dang nhap
+  $nav_main = '';
+  if ($user) {
+      $nav_main = '
+        <a href="/upload.php">&#128206; Tai lieu</a>
+        <a href="/feedback.php">&#128172; Phan hoi</a>';
+  }
+
   $home_link = in_array($role, ['admin', 'manager'], true) ? '/search.php' : '/upload.php';
 
   echo <<<HTML
@@ -90,7 +93,6 @@ function render_layout(string $content): void {
     min-height: 100vh;
   }
 
-  /* NAVBAR */
   .navbar {
     background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #0ea5e9 100%);
     padding: 0 32px;
@@ -162,14 +164,12 @@ function render_layout(string $content): void {
     margin: 0 6px;
   }
 
-  /* CONTAINER */
   .container {
     max-width: 960px;
     margin: 36px auto;
     padding: 0 20px;
   }
 
-  /* CARD */
   .card {
     background: white;
     border-radius: var(--radius);
@@ -190,7 +190,6 @@ function render_layout(string $content): void {
     letter-spacing: -0.3px;
   }
 
-  /* FORM */
   label {
     font-size: 13px;
     font-weight: 600;
@@ -246,7 +245,6 @@ function render_layout(string $content): void {
 
   button:active { transform: translateY(0); }
 
-  /* ALERTS */
   .alert-danger {
     background: #fef2f2;
     color: #dc2626;
@@ -269,7 +267,6 @@ function render_layout(string $content): void {
     font-weight: 500;
   }
 
-  /* TABLE */
   table { width: 100%; border-collapse: collapse; margin-top: 8px; }
 
   th {
@@ -293,7 +290,6 @@ function render_layout(string $content): void {
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: var(--primary-light); }
 
-  /* BADGES */
   .badge {
     display: inline-flex;
     align-items: center;
@@ -309,7 +305,6 @@ function render_layout(string $content): void {
   .badge-user    { background: #eff6ff; color: #1d4ed8; }
   .badge-manager { background: #f3e8ff; color: #7e22ce; }
 
-  /* MISC */
   .hint { font-size: 12px; color: var(--gray-400); margin-top: 8px; }
   code {
     font-family: 'JetBrains Mono', 'Courier New', monospace;
@@ -322,10 +317,7 @@ function render_layout(string $content): void {
 
   a { color: var(--primary); }
 
-  /* PAGE HEADER */
-  .page-header {
-    margin-bottom: 24px;
-  }
+  .page-header { margin-bottom: 24px; }
   .page-header h1 {
     font-size: 26px;
     font-weight: 700;
@@ -343,14 +335,13 @@ function render_layout(string $content): void {
 
 <nav class="navbar">
   <a href="{$home_link}" class="navbar-brand">
-    <div class="navbar-logo">🏢</div>
+    <div class="navbar-logo">&#127970;</div>
     <div class="navbar-title">Company <span>Portal</span></div>
   </a>
 
   <div class="navbar-nav">
     {$nav_search}
-    <a href="/upload.php">📎 Tài liệu</a>
-    <a href="/feedback.php">💬 Phản hồi</a>
+    {$nav_main}
     <div class="navbar-divider"></div>
     {$nav_user}
   </div>
