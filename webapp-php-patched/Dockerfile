@@ -21,11 +21,15 @@ COPY modsecurity/rule-xss.conf /etc/modsecurity/rules/rule-xss.conf
 COPY modsecurity/rule-jwt.conf /etc/modsecurity/rules/rule-jwt.conf
 RUN chown -R www-data:www-data /var/www/html
 
-RUN sed -i 's|CustomLog \${APACHE_LOG_DIR}/access.log combined|CustomLog /var/log/apache2/access_real.log combined|' /etc/apache2/sites-enabled/000-default.conf \
-    && sed -i 's|ErrorLog \${APACHE_LOG_DIR}/error.log|ErrorLog /var/log/apache2/error_real.log|' /etc/apache2/sites-enabled/000-default.conf \
+RUN sed -i 's|CustomLog ${APACHE_LOG_DIR}/access.log combined|CustomLog /var/log/apache2/access_real.log combined|' /etc/apache2/sites-enabled/000-default.conf \
+    && sed -i 's|ErrorLog ${APACHE_LOG_DIR}/error.log|ErrorLog /var/log/apache2/error_real.log|' /etc/apache2/sites-enabled/000-default.conf \
     && touch /var/log/apache2/access_real.log /var/log/apache2/error_real.log \
     && chown www-data:adm /var/log/apache2/access_real.log /var/log/apache2/error_real.log \
     && chmod 664 /var/log/apache2/access_real.log /var/log/apache2/error_real.log
+
+# FIX: ErrorDocument 403 -> error403.php xu ly redirect ve trang goc kem ?waf_block=1
+# Thay vi hien trang 403 trang cua Apache, PHP se hien thong bao loi tu nhien
+RUN sed -i '/<\/VirtualHost>/i\        ErrorDocument 403 /error403.php' /etc/apache2/sites-enabled/000-default.conf
 
 # Ngan PHP thuc thi trong /uploads/
 RUN printf '<Directory /var/www/html/uploads>\n\
