@@ -1,13 +1,21 @@
 <?php
 // ============================================================
 // search.php (port 5001 - PATCHED)
-// FIX 1: chi admin va manager moi duoc xem trang nay
-// FIX 2: dung prepared statement, khong con SQLi
-// FIX 3: WAF block -> hien "Khong tim thay nhan vien" thay vi 403
+// FIX 1: chua dang nhap -> redirect login, khong phai die 403
+// FIX 2: chi admin va manager moi duoc xem
+// FIX 3: prepared statement, khong SQLi
+// FIX 4: WAF block -> hien "Khong tim thay" thay vi 403
 // ============================================================
 require_once 'config.php';
 require_once 'layout.php';
 
+// FIX: chua dang nhap thi redirect ve login
+if (!isset($_SESSION['user'])) {
+    header('Location: /login.php');
+    exit;
+}
+
+// FIX: da dang nhap nhung khong du quyen thi redirect ve upload
 $role = 'guest';
 if (isset($_COOKIE['token'])) {
     require_once 'jwt.php';
@@ -17,8 +25,8 @@ if (isset($_COOKIE['token'])) {
     }
 }
 if (!in_array($role, ['admin', 'manager'], true)) {
-    http_response_code(403);
-    die('<h2>403 Forbidden</h2><p>Ban khong co quyen truy cap trang nay.</p>');
+    header('Location: /upload.php');
+    exit;
 }
 
 $q       = $_GET['q'] ?? '';
@@ -27,8 +35,8 @@ $results = null;
 // FIX: WAF block -> hien thong bao "khong tim thay" thay vi 403
 $waf_msg = '';
 if (isset($_GET['waf_block'])) {
-    $waf_msg  = "<div class='alert-danger'>Khong tim thay nhan vien phu hop voi tu khoa nay.</div>";
-    $results  = []; // reset de khong hien form ket qua cu
+    $waf_msg = "<div class='alert-danger'>Khong tim thay nhan vien phu hop voi tu khoa nay.</div>";
+    $results = [];
 }
 
 if ($q !== '' && !isset($_GET['waf_block'])) {
