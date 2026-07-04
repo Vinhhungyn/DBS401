@@ -1,12 +1,13 @@
 <?php
 // ============================================================
 // upload.php (port 5001 - PATCHED)
-// Fix: whitelist extension, doi ten file bang uniqid, bo $shell_url debug block
+// FIX: whitelist extension, doi ten file bang uniqid
+// FIX: WAF block -> hien "File khong hop le" thay vi 403
 // ============================================================
 require_once 'config.php';
 require_once 'layout.php';
 
-$message = '';
+$message  = '';
 $msg_type = '';
 
 if (!isset($_SESSION['user'])) {
@@ -14,21 +15,26 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
+// FIX: WAF block -> hien thong bao loi upload tu nhien
+if (isset($_GET['waf_block'])) {
+    $message  = 'File khong hop le hoac khong duoc ho tro!';
+    $msg_type = 'danger';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
     $file    = $_FILES['file'];
     $ext     = strtolower(pathinfo(basename($file['name']), PATHINFO_EXTENSION));
-    $allowed = ['pdf', 'doc', 'docx','jpg', 'jpeg', 'png'];
+    $allowed = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
     $upload_dir = __DIR__ . '/uploads/';
 
     if (!in_array($ext, $allowed)) {
-        $message  = 'Chi chap nhan: pdf, doc, docx,jpg, jpeg, png!';
+        $message  = 'Chi chap nhan: pdf, doc, docx, jpg, jpeg, png!';
         $msg_type = 'danger';
     } elseif ($file['size'] > 5 * 1024 * 1024) {
         $message  = 'File qua lon! Toi da 5MB.';
         $msg_type = 'danger';
     } else {
         if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
-        // Doi ten file hoan toan bang uniqid - khong giu ten goc, chong path traversal
         $safe_name = uniqid('file_', true) . '.' . $ext;
         $dest = $upload_dir . $safe_name;
         if (move_uploaded_file($file['tmp_name'], $dest)) {
@@ -54,9 +60,8 @@ $content = <<<HTML
     <input type="file" name="file" style="margin: 8px 0 16px; width:100%;">
     <button type="submit">Upload</button>
   </form>
-  <p class="hint">Ho tro: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG (toi da 5MB)</p>
+  <p class="hint">Ho tro: PDF, DOC, DOCX, JPG, PNG (toi da 5MB)</p>
 </div>
 HTML;
 
 render_layout($content);
-?>

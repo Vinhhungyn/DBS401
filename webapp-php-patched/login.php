@@ -6,6 +6,11 @@ require_once 'layout.php';
 $error    = '';
 $username = '';
 
+// FIX: WAF block -> hien "Sai ten dang nhap hoac mat khau" thay vi 403
+if (isset($_GET['waf_block'])) {
+    $error = 'Sai ten dang nhap hoac mat khau!';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
@@ -18,9 +23,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = $stmt->get_result();
 
         if ($result && $row = $result->fetch_assoc()) {
-            // FIX: dùng password_verify() để so khớp bcrypt hash
-            // Vulnerable (5000): if ($password === $row['password'])  <-- so sánh plaintext, không an toàn
-            // Patched  (5001): password_verify() kiểm tra đúng bcrypt hash
+            // FIX: dung password_verify() de so khop bcrypt hash
+            // Vulnerable (5000): if ($password === $row['password'])  <-- so sanh plaintext
+            // Patched  (5001): password_verify() kiem tra dung bcrypt hash
             if (password_verify($password, $row['password'])) {
                 $_SESSION['user'] = $row['username'];
                 $_SESSION['role'] = $row['role'];
@@ -28,7 +33,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 require_once 'jwt.php';
                 $token = jwt_create($row['username'], $row['role']);
 
-                // Cookie token - HttpOnly, SameSite Strict
                 setcookie('token', $token, [
                     'expires'  => time() + 3600,
                     'path'     => '/',
@@ -36,7 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'samesite' => 'Strict',
                 ]);
 
-                // Cookie logged_in
                 setcookie('logged_in', '1', [
                     'expires'  => time() + 3600,
                     'path'     => '/',
@@ -55,11 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
         }
-        $error = 'Sai tên đăng nhập hoặc mật khẩu!';
+        $error = 'Sai ten dang nhap hoac mat khau!';
         $stmt->close();
         $conn->close();
     } catch (Exception $e) {
-        $error = 'Lỗi hệ thống.';
+        $error = 'Loi he thong.';
     }
 }
 
@@ -68,14 +71,14 @@ $uval     = htmlspecialchars($username);
 
 $content = <<<HTML
 <div class="card" style="max-width:420px; margin:0 auto;">
-  <h2>&#128100; Đăng nhập</h2>
+  <h2>&#128100; Dang nhap</h2>
   {$err_html}
   <form method="POST" action="/login.php">
-    <label>Tên đăng nhập</label>
-    <input type="text" name="username" placeholder="Nhập username..." value="{$uval}">
-    <label>Mật khẩu</label>
-    <input type="password" name="password" placeholder="Nhập mật khẩu...">
-    <button type="submit" style="width:100%;">Đăng nhập</button>
+    <label>Ten dang nhap</label>
+    <input type="text" name="username" placeholder="Nhap username..." value="{$uval}">
+    <label>Mat khau</label>
+    <input type="password" name="password" placeholder="Nhap mat khau...">
+    <button type="submit" style="width:100%;">Dang nhap</button>
   </form>
 </div>
 HTML;
