@@ -1,8 +1,8 @@
 <?php
 // ============================================================
-// feedback.php — Trang gửi phản hồi nội bộ (port 5000 - VULNERABLE)
-// LỖ HỔNG CỐ Ý: Reflected XSS + Stored XSS
-// Phan quyen: admin xem danh sach, user/manager gui phan hoi
+// feedback.php (port 5000 - VULNERABLE)
+// LO HONG CO Y: Stored XSS + Reflected XSS
+// Luu feedback vao file JSON de share giua cac session
 // ============================================================
 require_once 'config.php';
 require_once 'layout.php';
@@ -12,7 +12,6 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
-// Doc role tu JWT (vulnerable: khong verify signature)
 $role = 'user';
 if (isset($_COOKIE['token'])) {
     require_once 'jwt.php';
@@ -25,20 +24,26 @@ if (isset($_COOKIE['token'])) {
 $message  = '';
 $msg_type = '';
 
-if (!isset($_SESSION['feedbacks'])) $_SESSION['feedbacks'] = [];
+// Luu feedback vao file JSON (share giua tat ca session)
+$feedback_file = '/tmp/feedbacks.json';
+$feedbacks = [];
+if (file_exists($feedback_file)) {
+    $feedbacks = json_decode(file_get_contents($feedback_file), true) ?? [];
+}
 
 // Chi user/manager moi duoc gui phan hoi
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $role !== 'admin') {
     $name    = $_POST['name']    ?? '';
     $comment = $_POST['comment'] ?? '';
     if ($name && $comment) {
-        // LO HONG: luu truc tiep khong sanitize → Stored XSS
-        $_SESSION['feedbacks'][] = [
+        // LO HONG: luu truc tiep khong sanitize -> Stored XSS
+        $feedbacks[] = [
             'name'    => $name,
             'comment' => $comment,
             'time'    => date('H:i:s d/m/Y'),
             'user'    => $_SESSION['user'],
         ];
+        file_put_contents($feedback_file, json_encode($feedbacks));
         $message  = 'Gui phan hoi thanh cong!';
         $msg_type = 'success';
     }
@@ -53,27 +58,20 @@ if ($search !== '') {
 
 $msg_html = $message ? "<div class='alert-{$msg_type}'>{$message}</div>" : '';
 
-// Danh sach phan hoi (chi admin thay)
+// Danh sach phan hoi (chi admin thay) - khong escape = Stored XSS
 $feedback_html = '';
-foreach (array_reverse($_SESSION['feedbacks']) as $fb) {
-    // LO HONG: khong escape → Stored XSS
+foreach (array_reverse($feedbacks) as $fb) {
     $feedback_html .= "
     <div style='padding:14px 0;border-bottom:1px solid #eee;'>
       <div style='font-weight:600;color:#1a237e;margin-bottom:4px;'>
-        {$fb['name']} <span style='font-size:12px;color:#999;font-weight:normal;'>— {$fb['time']}</span>
+        {$fb['name']} <span style='font-size:12px;color:#999;font-weight:normal;'>- {$fb['time']}</span>
       </div>
       <div style='color:#444;'>{$fb['comment']}</div>
     </div>";
 }
 if (!$feedback_html) $feedback_html = '<p style="color:#999;">Chua co phan hoi nao.</p>';
 
-// ============================================================
-// HIEN THI THEO ROLE
-// Admin: chi thay danh sach phan hoi + search
-// User/Manager: chi thay form gui phan hoi
-// ============================================================
 if ($role === 'admin') {
-    // Admin: xem danh sach, co search (Reflected XSS o day)
     $content = <<<HTML
 <div class="card">
   <h2>&#128172; Quan ly phan hoi</h2>
@@ -83,14 +81,12 @@ if ($role === 'admin') {
   </form>
   {$search_msg}
 </div>
-
 <div class="card">
   <h2>Danh sach phan hoi</h2>
   {$feedback_html}
 </div>
 HTML;
 } else {
-    // User/Manager: chi thay form gui phan hoi
     $content = <<<HTML
 <div class="card">
   <h2>&#128172; Gui phan hoi noi bo</h2>

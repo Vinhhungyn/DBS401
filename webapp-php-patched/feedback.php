@@ -1,7 +1,7 @@
 <?php
 // feedback.php (port 5001 - PATCHED)
 // FIX: htmlspecialchars chong XSS
-// Phan quyen: admin xem danh sach, user/manager gui phan hoi
+// Luu feedback vao file JSON de share giua cac session
 require_once 'config.php';
 require_once 'layout.php';
 
@@ -10,7 +10,6 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
-// Doc role tu JWT (patched: co verify signature)
 $role = 'user';
 if (isset($_COOKIE['token'])) {
     require_once 'jwt.php';
@@ -23,12 +22,17 @@ if (isset($_COOKIE['token'])) {
 $message  = '';
 $msg_type = '';
 
-if (!isset($_SESSION['feedbacks'])) $_SESSION['feedbacks'] = [];
-
 // WAF block
 if (isset($_GET['waf_block'])) {
     $message  = 'Noi dung phan hoi khong hop le, vui long kiem tra lai!';
     $msg_type = 'danger';
+}
+
+// Luu feedback vao file JSON (share giua tat ca session)
+$feedback_file = '/tmp/feedbacks_patched.json';
+$feedbacks = [];
+if (file_exists($feedback_file)) {
+    $feedbacks = json_decode(file_get_contents($feedback_file), true) ?? [];
 }
 
 // Chi user/manager moi duoc gui phan hoi
@@ -46,18 +50,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $role !== 'admin') {
         $message  = 'Noi dung khong duoc qua 1000 ky tu!';
         $msg_type = 'danger';
     } else {
-        $_SESSION['feedbacks'][] = [
+        $feedbacks[] = [
             'name'    => $name,
             'comment' => $comment,
             'time'    => date('H:i:s d/m/Y'),
             'user'    => $_SESSION['user'],
         ];
+        file_put_contents($feedback_file, json_encode($feedbacks));
         $message  = 'Gui phan hoi thanh cong!';
         $msg_type = 'success';
     }
 }
 
-// FIX: escape search de chong Reflected XSS
+// FIX: escape search chong Reflected XSS
 $search     = $_GET['search'] ?? '';
 $search_msg = '';
 if ($search !== '') {
@@ -67,27 +72,22 @@ if ($search !== '') {
 
 $msg_html = $message ? "<div class='alert-{$msg_type}'>" . htmlspecialchars($message) . "</div>" : '';
 
-// Danh sach phan hoi (chi admin thay) - FIX: escape tat ca output
+// FIX: escape tat ca output chong Stored XSS
 $feedback_html = '';
-foreach (array_reverse($_SESSION['feedbacks']) as $fb) {
+foreach (array_reverse($feedbacks) as $fb) {
     $safe_name    = htmlspecialchars($fb['name'],    ENT_QUOTES, 'UTF-8');
     $safe_comment = htmlspecialchars($fb['comment'], ENT_QUOTES, 'UTF-8');
     $safe_time    = htmlspecialchars($fb['time'],    ENT_QUOTES, 'UTF-8');
     $feedback_html .= "
     <div style='padding:14px 0;border-bottom:1px solid #eee;'>
       <div style='font-weight:600;color:#1a237e;margin-bottom:4px;'>
-        {$safe_name} <span style='font-size:12px;color:#999;font-weight:normal;'>— {$safe_time}</span>
+        {$safe_name} <span style='font-size:12px;color:#999;font-weight:normal;'>- {$safe_time}</span>
       </div>
       <div style='color:#444;'>{$safe_comment}</div>
     </div>";
 }
 if (!$feedback_html) $feedback_html = '<p style="color:#999;">Chua co phan hoi nao.</p>';
 
-// ============================================================
-// HIEN THI THEO ROLE
-// Admin: chi thay danh sach phan hoi + search
-// User/Manager: chi thay form gui phan hoi
-// ============================================================
 if ($role === 'admin') {
     $content = <<<HTML
 <div class="card">
@@ -98,7 +98,6 @@ if ($role === 'admin') {
   </form>
   {$search_msg}
 </div>
-
 <div class="card">
   <h2>Danh sach phan hoi</h2>
   {$feedback_html}
