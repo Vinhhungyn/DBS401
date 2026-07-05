@@ -13,9 +13,16 @@ define('DB_USER', getenv('DB_USER') ?: 'app_user');
 define('DB_PASS', getenv('DB_PASS') ?: 'app123');
 define('DB_NAME', getenv('DB_NAME') ?: 'company_db_patched');
 
-// FIX: JWT_SECRET lay tu env, fallback random neu khong co
-// Production nen set JWT_SECRET trong docker-compose environment
-define('JWT_SECRET', getenv('JWT_SECRET') ?: bin2hex(random_bytes(32)));
+// FIX: JWT_SECRET bat buoc phai co trong env (set trong docker-compose)
+// Neu thieu → bao loi ro rang thay vi fallback random (random = bug nghiem trong)
+define('JWT_SECRET', (function() {
+    $s = getenv('JWT_SECRET');
+    if (!$s) {
+        error_log('[SECURITY] JWT_SECRET chua duoc set trong environment!');
+        die('Loi cau hinh server. Lien he quan tri vien.');
+    }
+    return $s;
+})());
 
 function get_conn(): mysqli {
     $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);

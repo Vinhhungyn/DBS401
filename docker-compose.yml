@@ -81,6 +81,8 @@ services:
       DB_PORT: 3306
       DB_USER: app_user
       DB_PASS: app123
+      # FIX: JWT_SECRET cố định để token không bị invalid sau mỗi request
+      JWT_SECRET: 27b70ef288094618ad409354d3cbba18537af03139bc7971f8c54cd39b3e510e
     depends_on:
       - mysql-patched
     networks:
