@@ -27,3 +27,8 @@ Browser → ModSecurity (HTTP layer) → PHP → ProxySQL (SQL layer) → MySQL
 DB_HOST: proxysql → mysql_vuln
 DB_PORT: 6033 → 3306
 Và depends_on xóa dòng - proxysql đi.
+
+TK test:              ROLE
+admin admin123        admin 
+alice alice456        user
+charlie charlie000    manager
