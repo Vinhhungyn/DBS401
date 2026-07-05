@@ -58,13 +58,13 @@ services:
       - "5000:80"
     environment:
       # FIX: route qua ProxySQL để demo ProxySQL blocked
-      DB_HOST: proxysql
-      DB_PORT: 6033
+      DB_HOST: mysql_vuln
+      DB_PORT: 3306
       DB_USER: app_user
       DB_PASS: app123
     depends_on:
       - mysql-vulnerable
-      - proxysql
+      #- proxysql
     networks:
       - dbnet
 

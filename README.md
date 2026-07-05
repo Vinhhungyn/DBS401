@@ -22,3 +22,8 @@ misconfig (C:\Windows\System32\ipconfig.exe) xem ip và vô fuff (ffuf -u http:/
 đăng ký :  ', '', '', 'admin', 99999)#
 INSERT INTO employees (username, email, password, role, salary)
 VALUES ('', '', '', 'admin', 99999)#', '123456', 'user', 0)
+
+Browser → ModSecurity (HTTP layer) → PHP → ProxySQL (SQL layer) → MySQL
+DB_HOST: proxysql → mysql_vuln
+DB_PORT: 6033 → 3306
+Và depends_on xóa dòng - proxysql đi.
