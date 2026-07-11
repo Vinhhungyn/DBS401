@@ -39,9 +39,9 @@ function render_layout(string $content): void {
                    <a href='/register.php' style='background:rgba(255,255,255,0.15);'>&#128221; Dang ky</a>";
   }
 
-  // FIX: chi hien menu Nhan vien khi da dang nhap va la admin/manager
+  // FIX: hien menu Nhan vien cho admin, manager va user
   $nav_search = '';
-  if ($user && in_array($role, ['admin', 'manager'], true)) {
+  if ($user && in_array($role, ['admin', 'manager', 'user'], true)) {
       $nav_search = '<a href="/search.php">&#128101; Nhan vien</a>';
   }
 
