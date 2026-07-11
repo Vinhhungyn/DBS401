@@ -2,7 +2,7 @@
 // ============================================================
 // search.php (port 5001 - PATCHED)
 // FIX 1: chua dang nhap -> redirect login, khong phai die 403
-// FIX 2: chi admin va manager moi duoc xem
+// FIX 2: user -> Username+Email | manager -> +Salary | admin -> full
 // FIX 3: prepared statement, khong SQLi
 // FIX 4: WAF block -> hien "Khong tim thay" thay vi 403
 // ============================================================
@@ -15,7 +15,7 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
-// FIX: da dang nhap nhung khong du quyen thi redirect ve upload
+// Doc role tu JWT
 $role = 'guest';
 if (isset($_COOKIE['token'])) {
     require_once 'jwt.php';
@@ -24,7 +24,9 @@ if (isset($_COOKIE['token'])) {
         $role = $payload['role'];
     }
 }
-if (!in_array($role, ['admin', 'manager'], true)) {
+
+// FIX: chi admin, manager, user moi duoc vao; guest -> redirect
+if (!in_array($role, ['admin', 'manager', 'user'], true)) {
     header('Location: /upload.php');
     exit;
 }
@@ -79,7 +81,15 @@ if ($results !== null && !isset($_GET['waf_block'])) {
     $content .= "<div class='card'><h2>Ket qua ({$count} ban ghi)</h2>";
 
     if ($count > 0) {
-        $content .= '<table><tr><th>ID</th><th>Username</th><th>Role</th><th>Email</th><th>Salary</th></tr>';
+        // Header theo role
+        if ($role === 'admin') {
+            $content .= '<table><tr><th>ID</th><th>Username</th><th>Role</th><th>Email</th><th>Salary</th></tr>';
+        } elseif ($role === 'manager') {
+            $content .= '<table><tr><th>Username</th><th>Email</th><th>Salary</th></tr>';
+        } else {
+            $content .= '<table><tr><th>Username</th><th>Email</th></tr>';
+        }
+
         foreach ($results as $r) {
             $id     = htmlspecialchars($r[0] ?? '');
             $uname  = htmlspecialchars($r[1] ?? '');
@@ -88,13 +98,27 @@ if ($results !== null && !isset($_GET['waf_block'])) {
             $salary = is_numeric($r[4])
                     ? number_format((float)$r[4], 0, '.', ',') . ' d'
                     : htmlspecialchars($r[4] ?? '');
-            $content .= "<tr>
-              <td>{$id}</td>
-              <td><b>{$uname}</b></td>
-              <td><span class='badge badge-{$role_r}'>{$role_r}</span></td>
-              <td>{$email}</td>
-              <td>{$salary}</td>
-            </tr>";
+
+            if ($role === 'admin') {
+                $content .= "<tr>
+                  <td>{$id}</td>
+                  <td><b>{$uname}</b></td>
+                  <td><span class='badge badge-{$role_r}'>{$role_r}</span></td>
+                  <td>{$email}</td>
+                  <td>{$salary}</td>
+                </tr>";
+            } elseif ($role === 'manager') {
+                $content .= "<tr>
+                  <td><b>{$uname}</b></td>
+                  <td>{$email}</td>
+                  <td>{$salary}</td>
+                </tr>";
+            } else {
+                $content .= "<tr>
+                  <td><b>{$uname}</b></td>
+                  <td>{$email}</td>
+                </tr>";
+            }
         }
         $content .= '</table>';
     } else {
