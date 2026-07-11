@@ -2,10 +2,11 @@
 // ============================================================
 // search.php — Tìm kiếm nhân viên
 // Phân quyền:
-//   user    → chỉ xem Username, Email
+//   user    → chỉ xem Username, Email (bình thường)
+//             nhưng nếu SQLi inject thêm cột → lộ full (demo lỗ hổng)
 //   manager → xem Username, Email, Salary
 //   admin   → xem full (ID, Username, Role, Email, Salary)
-// LỖ HỔNG CỐ Ý: UNION-based SQLi, hiện query để demo
+// LỖ HỔNG CỐ Ý: UNION-based SQLi
 // ============================================================
 require_once 'config.php';
 require_once 'layout.php';
@@ -19,7 +20,6 @@ if (isset($_COOKIE['token'])) {
     }
 }
 
-// Chỉ các role được phép mới vào được
 if (!in_array($role, ['admin', 'manager', 'user'], true)) {
     http_response_code(403);
     die('<h2>403 Forbidden</h2><p>Bạn không có quyền truy cập trang này.</p>');
@@ -27,27 +27,34 @@ if (!in_array($role, ['admin', 'manager', 'user'], true)) {
 
 $q         = $_GET['q'] ?? '';
 $results   = null;
-$sql_shown = null;
+$num_cols  = 0;
+$col_names = [];
 
 if ($q !== '') {
     try {
         $conn = get_conn();
 
         // LỖ HỔNG CỐ Ý: nối chuỗi thẳng vào SQL, không escape
-        $sql       = "SELECT id, username, role, email, salary FROM employees WHERE username='{$q}'";
-        $sql_shown = $sql;
-        $res       = $conn->query($sql);
+        $sql = "SELECT id, username, role, email, salary FROM employees WHERE username='{$q}'";
+        $res = $conn->query($sql);
 
         $results = [];
         if ($res) {
+            // Lấy tên cột thực tế từ result (để render đúng dù SQLi đổi cột)
+            $fields = $res->fetch_fields();
+            foreach ($fields as $f) {
+                $col_names[] = strtoupper($f->name);
+            }
+            $num_cols = count($col_names);
+
             while ($row = $res->fetch_row()) {
                 $results[] = $row;
             }
         }
         $conn->close();
     } catch (Exception $e) {
-        $results   = [];
-        $sql_shown = 'LỖI: ' . $e->getMessage();
+        $results  = [];
+        $num_cols = 0;
     }
 }
 
@@ -71,48 +78,60 @@ if ($results !== null) {
     $content .= "<div class='card'><h2>Kết quả ({$count} bản ghi)</h2>";
 
     if ($count > 0) {
-        // Header bảng theo role
-        if ($role === 'admin') {
-            $content .= '<table><tr><th>ID</th><th>Username</th><th>Role</th><th>Email</th><th>Salary</th></tr>';
+        // Với role user: nếu SQLi inject làm số cột != 5 hoặc
+        // giá trị lạ xuất hiện → render toàn bộ cột (lộ dữ liệu — demo lỗ hổng)
+        // Bình thường (đúng 5 cột, search thường) → chỉ hiện Username + Email
+        $is_sqli_result = ($role === 'user') && ($num_cols != 5 || count($results) > 1);
+
+        if ($role === 'admin' || $is_sqli_result) {
+            // Render full: header động theo tên cột thực tế
+            $header = implode('', array_map(fn($c) => "<th>{$c}</th>", $col_names));
+            $content .= "<table><tr>{$header}</tr>";
+            foreach ($results as $r) {
+                $content .= '<tr>';
+                foreach ($r as $cell) {
+                    $val = htmlspecialchars($cell ?? '');
+                    $content .= "<td>{$val}</td>";
+                }
+                $content .= '</tr>';
+            }
+            $content .= '</table>';
+
+            if ($is_sqli_result) {
+                $content .= '<p style="color:#e53e3e;font-size:13px;margin-top:8px;">
+                  &#9888; Dữ liệu bị lộ do SQL Injection!</p>';
+            }
+
         } elseif ($role === 'manager') {
             $content .= '<table><tr><th>Username</th><th>Email</th><th>Salary</th></tr>';
+            foreach ($results as $r) {
+                $uname  = htmlspecialchars($r[1] ?? '');
+                $email  = htmlspecialchars($r[3] ?? '');
+                $salary = is_numeric($r[4])
+                        ? number_format((float)$r[4], 0, '.', ',') . ' đ'
+                        : htmlspecialchars($r[4] ?? '');
+                $content .= "<tr>
+                  <td><b>{$uname}</b></td>
+                  <td>{$email}</td>
+                  <td>{$salary}</td>
+                </tr>";
+            }
+            $content .= '</table>';
+
         } else {
-            // user
+            // user bình thường: chỉ Username + Email
             $content .= '<table><tr><th>Username</th><th>Email</th></tr>';
-        }
-
-        foreach ($results as $r) {
-            $id     = htmlspecialchars($r[0] ?? '');
-            $uname  = htmlspecialchars($r[1] ?? '');
-            $role_r = htmlspecialchars($r[2] ?? '');
-            $email  = htmlspecialchars($r[3] ?? '');
-            $salary = is_numeric($r[4])
-                    ? number_format((float)$r[4], 0, '.', ',') . ' đ'
-                    : htmlspecialchars($r[4] ?? '');
-
-            if ($role === 'admin') {
-                $content .= "<tr>
-                  <td>{$id}</td>
-                  <td><b>{$uname}</b></td>
-                  <td><span class='badge badge-{$role_r}'>{$role_r}</span></td>
-                  <td>{$email}</td>
-                  <td>{$salary}</td>
-                </tr>";
-            } elseif ($role === 'manager') {
-                $content .= "<tr>
-                  <td><b>{$uname}</b></td>
-                  <td>{$email}</td>
-                  <td>{$salary}</td>
-                </tr>";
-            } else {
-                // user: chỉ Username và Email
+            foreach ($results as $r) {
+                $uname = htmlspecialchars($r[1] ?? '');
+                $email = htmlspecialchars($r[3] ?? '');
                 $content .= "<tr>
                   <td><b>{$uname}</b></td>
                   <td>{$email}</td>
                 </tr>";
             }
+            $content .= '</table>';
         }
-        $content .= '</table>';
+
     } else {
         $content .= '<p style="color:#999;">Không tìm thấy nhân viên nào.</p>';
     }
