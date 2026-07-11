@@ -44,17 +44,14 @@ $msg_html = $message
     ? "<div class='alert-{$msg_type}'>{$message}</div>"
     : '';
 
-$shell_url = $uploaded_url ? "<div class='alert-danger'>
-    &#9888; Thực thi lệnh: <a href='{$uploaded_url}?cmd=id' target='_blank'>{$uploaded_url}?cmd=id</a><br>
-    Thử: <code>{$uploaded_url}?cmd=ls /var/www/html</code><br>
-    Thử: <code>{$uploaded_url}?cmd=cat /var/www/html/config.php</code>
-</div>" : '';
+
+
 
 $content = <<<HTML
 <div class="card">
   <h2>&#128196; Upload tài liệu nội bộ</h2>
   {$msg_html}
-  {$shell_url}
+
   <form method="POST" enctype="multipart/form-data">
     <label>Chọn file để upload</label>
     <input type="file" name="file" style="margin: 8px 0 16px; width:100%;">
