@@ -1,15 +1,15 @@
 <?php
 // ============================================================
 // search.php — Tìm kiếm nhân viên
-// Tương đương: @app.route("/search")
+// Phân quyền:
+//   user    → chỉ xem Username, Email
+//   manager → xem Username, Email, Salary
+//   admin   → xem full (ID, Username, Role, Email, Salary)
 // LỖ HỔNG CỐ Ý: UNION-based SQLi, hiện query để demo
-// FIX: chi admin va manager moi duoc xem trang nay
 // ============================================================
 require_once 'config.php';
 require_once 'layout.php';
 
-// FIX: kiem tra quyen truy cap o phia server (khong chi an link ngoai UI)
-// FIX: doc role tu JWT token (da verify), khong con doc tu session/cookie rieng
 $role = 'guest';
 if (isset($_COOKIE['token'])) {
     require_once 'jwt.php';
@@ -18,13 +18,15 @@ if (isset($_COOKIE['token'])) {
         $role = $payload['role'];
     }
 }
-if (!in_array($role, ['admin', 'manager'], true)) {
+
+// Chỉ các role được phép mới vào được
+if (!in_array($role, ['admin', 'manager', 'user'], true)) {
     http_response_code(403);
     die('<h2>403 Forbidden</h2><p>Bạn không có quyền truy cập trang này.</p>');
 }
 
 $q         = $_GET['q'] ?? '';
-$results   = null;   // null = chưa search
+$results   = null;
 $sql_shown = null;
 
 if ($q !== '') {
@@ -69,7 +71,16 @@ if ($results !== null) {
     $content .= "<div class='card'><h2>Kết quả ({$count} bản ghi)</h2>";
 
     if ($count > 0) {
-        $content .= '<table><tr><th>ID</th><th>Username</th><th>Role</th><th>Email</th><th>Salary</th></tr>';
+        // Header bảng theo role
+        if ($role === 'admin') {
+            $content .= '<table><tr><th>ID</th><th>Username</th><th>Role</th><th>Email</th><th>Salary</th></tr>';
+        } elseif ($role === 'manager') {
+            $content .= '<table><tr><th>Username</th><th>Email</th><th>Salary</th></tr>';
+        } else {
+            // user
+            $content .= '<table><tr><th>Username</th><th>Email</th></tr>';
+        }
+
         foreach ($results as $r) {
             $id     = htmlspecialchars($r[0] ?? '');
             $uname  = htmlspecialchars($r[1] ?? '');
@@ -78,13 +89,28 @@ if ($results !== null) {
             $salary = is_numeric($r[4])
                     ? number_format((float)$r[4], 0, '.', ',') . ' đ'
                     : htmlspecialchars($r[4] ?? '');
-            $content .= "<tr>
-              <td>{$id}</td>
-              <td><b>{$uname}</b></td>
-              <td><span class='badge badge-{$role_r}'>{$role_r}</span></td>
-              <td>{$email}</td>
-              <td>{$salary}</td>
-            </tr>";
+
+            if ($role === 'admin') {
+                $content .= "<tr>
+                  <td>{$id}</td>
+                  <td><b>{$uname}</b></td>
+                  <td><span class='badge badge-{$role_r}'>{$role_r}</span></td>
+                  <td>{$email}</td>
+                  <td>{$salary}</td>
+                </tr>";
+            } elseif ($role === 'manager') {
+                $content .= "<tr>
+                  <td><b>{$uname}</b></td>
+                  <td>{$email}</td>
+                  <td>{$salary}</td>
+                </tr>";
+            } else {
+                // user: chỉ Username và Email
+                $content .= "<tr>
+                  <td><b>{$uname}</b></td>
+                  <td>{$email}</td>
+                </tr>";
+            }
         }
         $content .= '</table>';
     } else {
@@ -92,16 +118,5 @@ if ($results !== null) {
     }
     $content .= '</div>';
 }
-
-// ---- Debug SQL ----
-// if ($sql_shown !== null) {
-//    $sql_esc  = htmlspecialchars($sql_shown);
-//    $content .= <<<HTML
-//  <div class="card" style="background:#fff8e1;">
-//  <h2>&#128196; Query đã thực thi (debug mode)</h2>
-//  <code style="background:#f5f5f5; padding:10px; display:block; border-radius:4px; word-break:break-all;">{$sql_esc}</code>
-//</div>
-//HTML;
-//}
 
 render_layout($content);
