@@ -29,9 +29,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar'])) {
 }
 
 $user    = $_SESSION['user'];
-$role = $_SESSION['role'] ?? 'user';
 $avatar  = $_SESSION['avatar'] ?? null;
 $initial = strtoupper(substr($user, 0, 1));
+
+// LỖ HỔNG CỐ Ý: đọc role từ JWT cookie mà KHÔNG verify signature đúng
+// → attacker có thể forge token để leo quyền
+require_once 'jwt.php';
+$role = 'user';
+if (isset($_COOKIE['token'])) {
+    $payload = jwt_decode($_COOKIE['token']);
+    if ($payload && isset($payload['role'])) {
+        $role = $payload['role'];
+    }
+}
 
 // LỖ HỔNG CỐ Ý: SQL nối chuỗi trực tiếp
 $conn = get_conn();
