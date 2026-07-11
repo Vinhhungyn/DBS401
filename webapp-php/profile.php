@@ -28,22 +28,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar'])) {
     }
 }
 
-$user    = $_SESSION['user'];
 $avatar  = $_SESSION['avatar'] ?? null;
-$initial = strtoupper(substr($user, 0, 1));
 
-// LỖ HỔNG CỐ Ý: đọc role từ JWT cookie mà KHÔNG verify signature đúng
-// → attacker có thể forge token để leo quyền
+// LỖ HỔNG CỐ Ý: đọc username VÀ role từ JWT cookie mà KHÔNG verify signature
+// → attacker có thể paste token của user khác để xem info + leo quyền
 require_once 'jwt.php';
 $role = 'user';
+$user = $_SESSION['user']; // fallback
 if (isset($_COOKIE['token'])) {
     $payload = jwt_decode($_COOKIE['token']);
-    if ($payload && isset($payload['role'])) {
-        $role = $payload['role'];
+    if ($payload) {
+        if (isset($payload['role']))     $role = $payload['role'];
+        if (isset($payload['username'])) $user = $payload['username']; // LO HONG: tin tuong username tu token
     }
 }
 
-// LỖ HỔNG CỐ Ý: SQL nối chuỗi trực tiếp
+$initial = strtoupper(substr($user, 0, 1));
+
+// LỖ HỔNG CỐ Ý: SQL nối chuỗi trực tiếp + username lấy từ token không verify
 $conn = get_conn();
 $sql  = "SELECT username, role, email, salary FROM employees WHERE username='{$user}'";
 $res  = $conn->query($sql);
