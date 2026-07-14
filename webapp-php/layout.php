@@ -4,17 +4,21 @@
 // ============================================================
 
 function render_layout(string $content): void {
-  $user = $_SESSION['user'] ?? null;
+  $user = null;
+$role = 'guest';
 
-  $role = 'guest';
-  if (isset($_COOKIE['token'])) {
-      require_once 'jwt.php';
-      $payload = jwt_decode($_COOKIE['token']);
-      if ($payload && isset($payload['role'])) {
-          $role = $payload['role'];
-      }
-  }
-
+if (isset($_COOKIE['token'])) {
+    require_once 'jwt.php';
+    $payload = jwt_decode($_COOKIE['token']);
+    if ($payload) {
+        // LO HONG: lay ca username va role tu JWT, khong verify signature
+        // Attacker swap token -> ca ten lan role deu doi theo
+        $user = $payload['username'] ?? ($_SESSION['user'] ?? null);
+        $role = $payload['role'] ?? 'guest';
+    }
+} else {
+    $user = $_SESSION['user'] ?? null;
+}
   $avatar = $_SESSION['avatar'] ?? null;
 
   $nav_user = '';
