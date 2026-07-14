@@ -1,8 +1,5 @@
 version: '3.8'
 services:
-  # ============================================================
-  # DB cho bên VULNERABLE (5000) - giữ password plaintext để demo SQLi
-  # ============================================================
   mysql-vulnerable:
     image: mysql:8.0
     container_name: mysql_vuln
@@ -23,10 +20,6 @@ services:
     networks:
       - dbnet
 
-  # ============================================================
-  # DB cho bên PATCHED (5001) - password bcrypt hash, tách riêng
-  # FIX: tách DB riêng để 2 side độc lập, không ảnh hưởng nhau
-  # ============================================================
   mysql-patched:
     image: mysql:8.0
     container_name: mysql_patched
@@ -57,14 +50,12 @@ services:
     ports:
       - "5000:80"
     environment:
-      # FIX: route qua ProxySQL để demo ProxySQL blocked
       DB_HOST: mysql_vuln
       DB_PORT: 3306
       DB_USER: app_user
       DB_PASS: app123
     depends_on:
       - mysql-vulnerable
-      #- proxysql
     networks:
       - dbnet
 
@@ -78,15 +69,15 @@ services:
     ports:
       - "5001:80"
     environment:
-      # FIX: trỏ sang mysql-patched thay vì proxysql, dùng DB riêng
-      DB_HOST: mysql-patched
-      DB_PORT: 3306
+      # Trỏ qua ProxySQL thay vì mysql-patched trực tiếp
+      DB_HOST: proxysql
+      DB_PORT: 6033
       DB_USER: app_user
       DB_PASS: app123
-      # FIX: JWT_SECRET cố định để token không bị invalid sau mỗi request
       JWT_SECRET: 27b70ef288094618ad409354d3cbba18537af03139bc7971f8c54cd39b3e510e
     depends_on:
       - mysql-patched
+      - proxysql
     networks:
       - dbnet
 
@@ -101,7 +92,7 @@ services:
       - ./proxysql/proxysql.cnf:/etc/proxysql.cnf
       - proxysql_log:/var/lib/proxysql
     depends_on:
-      - mysql-vulnerable
+      - mysql-patched
     networks:
       - dbnet
 
